@@ -267,7 +267,7 @@ async def get_card_modal(card_id: int):
 
       <div class="modal-actions flex gap-2 justify-end">
         <button type="submit" class="btn-add px-4 py-2 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">Save</button>
-        <button type="button" onclick="this.closest('.modal-overlay').innerHTML=''" class="btn-danger px-4 py-2 rounded bg-gray-600 text-white text-sm font-medium hover:bg-gray-500">Cancel</button>
+        <button type="button" onclick="document.getElementById('modal').innerHTML=''" class="btn-danger px-4 py-2 rounded bg-gray-600 text-white text-sm font-medium hover:bg-gray-500">Cancel</button>
       </div>
     </form>
 
@@ -299,7 +299,10 @@ async def update_card_route(
     updated = update_card(card_id, title=title, description=description)
     if updated is None:
         raise HTTPException(status_code=404, detail="Card not found")
-    return _card_html(updated)
+    return HTMLResponse(
+        content=_card_html(updated),
+        headers={"HX-Trigger": "closeModal"},
+    )
 
 
 @app.delete("/cards/{card_id}", response_class=HTMLResponse)

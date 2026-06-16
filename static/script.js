@@ -113,8 +113,14 @@ document.addEventListener("click", function (evt) {
   document.addEventListener("click", function (evt) {
     var overlay = evt.target.closest(".modal-overlay");
     if (overlay && evt.target === overlay) {
-      overlay.classList.remove("active");
+      document.getElementById("modal").innerHTML = "";
     }
+  });
+
+  // Close modal after card save (triggered by HX-Trigger: closeModal)
+  document.body.addEventListener("closeModal", function () {
+    var modal = document.getElementById("modal");
+    if (modal) modal.innerHTML = "";
   });
 
   // Close modal on Escape key

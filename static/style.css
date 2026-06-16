@@ -1,18 +1,20 @@
-/* ── Theme Variables ── */
+/* ── Theme Variables (Dark) ── */
 :root {
-  --bg: #f0f2f5;
-  --column-bg: #e8ecf0;
-  --card-bg: #ffffff;
-  --text: #1a1a2e;
-  --text-muted: #6b7280;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
+  --bg: #0f0f1a;
+  --column-bg: #16213e;
+  --card-bg: #1e2a45;
+  --text: #ffffff;
+  --text-muted: #9ca3af;
+  --accent: #e94560;
+  --accent-hover: #d63851;
+  --accent-rgb: 233, 69, 96;
   --danger: #ef4444;
   --danger-hover: #dc2626;
-  --border: #d1d5db;
+  --border: #2a2a4a;
+  --hover-overlay: rgba(255, 255, 255, 0.08);
   --radius: 8px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Reset & Base ── */
@@ -160,8 +162,9 @@ header h1 {
 }
 
 .card-ghost {
-  opacity: 0.4;
-  border: 2px dashed var(--border);
+  opacity: 0.3;
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .card-title {
@@ -212,7 +215,7 @@ header h1 {
 
 .version-tag {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-muted);
   font-weight: 400;
   margin-left: 8px;
 }
@@ -220,7 +223,7 @@ header h1 {
 /* ── Subtask progress bar ── */
 .subtask-progress {
   font-size: 0.78rem;
-  color: #888;
+  color: var(--text-muted);
   margin: 4px 0;
   display: flex;
   align-items: center;
@@ -250,7 +253,7 @@ header h1 {
 }
 
 .btn-add:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--hover-overlay);
   color: var(--accent);
 }
 
@@ -271,7 +274,7 @@ header h1 {
 }
 
 .btn-danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.15);
   color: var(--danger-hover);
 }
 
@@ -288,7 +291,7 @@ header h1 {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 1000;
   align-items: center;
   justify-content: center;
@@ -301,7 +304,7 @@ header h1 {
 #modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -320,7 +323,8 @@ header h1 {
   max-width: 480px;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border);
 }
 
 .modal-content h2 {
@@ -344,6 +348,8 @@ header h1 {
   border-radius: 6px;
   font-size: 0.9rem;
   font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
   margin-bottom: 12px;
   transition: border-color 0.12s;
 }
@@ -352,7 +358,7 @@ header h1 {
 .modal-content textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.2);
 }
 
 .modal-content textarea {
