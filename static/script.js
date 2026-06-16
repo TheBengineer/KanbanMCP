@@ -37,6 +37,18 @@ document.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
 
 /* ── HTMX Event Handlers ── */
 
+// Before HTMX swaps, destroy Sortable instances on swapped-out elements
+document.body.addEventListener("htmx:beforeSwap", function (evt) {
+  var target = evt.detail.target;
+  if (!target) return;
+  target.querySelectorAll(".cards, .subtask-list").forEach(function (el) {
+    if (el.sortable) {
+      el.sortable.destroy();
+      el.sortable = null;
+    }
+  });
+});
+
 // After HTMX swaps new content, init Sortable on fresh containers
 document.body.addEventListener("htmx:afterSettle", function (evt) {
   var target = evt.detail.target;
