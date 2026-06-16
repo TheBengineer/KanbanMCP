@@ -55,10 +55,8 @@ def _card_html(card) -> str:
         total = len(card.subtasks)
         progress = f'<div class="subtask-progress">{done}/{total} done</div>'
 
-    subs = "".join(_subtask_row(s, f"subtasks-{card.id}") for s in card.subtasks[:3])
+    subs = "".join(_subtask_row(s, f"subtasks-{card.id}") for s in card.subtasks)
     more = ""
-    if len(card.subtasks) > 3:
-        more = f'<span class="more-subtasks">+{len(card.subtasks) - 3} more</span>'
 
     desc = ""
     if card.description:

@@ -61,7 +61,7 @@
                       {% set total = card.subtasks | length %}
                       <div class="subtask-progress">{{ done }}/{{ total }} done</div>
                       {% endif %}
-                      {% for sub in card.subtasks[:3] %}
+                      {% for sub in card.subtasks %}
                       <label class="subtask-item" id="subtask-{{ sub.id }}">
                         <input type="checkbox" class="subtask-checkbox"
                                hx-patch="/subtasks/{{ sub.id }}/toggle"
@@ -75,9 +75,7 @@
                                 class="btn-danger">×</button>
                       </label>
                       {% endfor %}
-                      {% if card.subtasks|length > 3 %}
-                      <span class="more-subtasks">+{{ card.subtasks|length - 3 }} more</span>
-                      {% endif %}
+
                     </div>
 
                     <form hx-post="/cards/{{ card.id }}/subtasks"
