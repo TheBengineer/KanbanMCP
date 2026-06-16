@@ -38,10 +38,10 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".cards").forEach(initSortable);
   document.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
 
-  // Before HTMX swaps, destroy Sortable instances on swapped-out elements
+  // Before HTMX swaps, destroy Sortable instances only on targeted sub-elements
   document.body.addEventListener("htmx:beforeSwap", function (evt) {
     var target = evt.detail.target;
-    if (!target) return;
+    if (!target || target === document.body) return;
     target.querySelectorAll(".cards, .subtask-list").forEach(function (el) {
       if (el.sortable) {
         el.sortable.destroy();
