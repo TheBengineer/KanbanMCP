@@ -327,13 +327,24 @@ def delete_card(card_id: int) -> None:
 
 
 def move_card(card_id: int, target_list_id: int, position: int) -> None:
-    """UPDATE card's list_id and position."""
+    """Move card to a list at the given position index, then renumber."""
     conn = get_conn()
     try:
-        conn.execute(
-            "UPDATE cards SET list_id = ?, position = ? WHERE id = ?",
-            (target_list_id, position, card_id),
-        )
+        rows = conn.execute(
+            "SELECT id FROM cards WHERE list_id = ? ORDER BY position, id",
+            (target_list_id,),
+        ).fetchall()
+        ids = [r["id"] for r in rows]
+        if card_id in ids:
+            ids.remove(card_id)
+        target_index = (position // 1000) - 1
+        target_index = max(0, min(target_index, len(ids)))
+        ids.insert(target_index, card_id)
+        for i, cid in enumerate(ids):
+            conn.execute(
+                "UPDATE cards SET list_id = ?, position = ? WHERE id = ?",
+                (target_list_id, (i + 1) * 1000, cid),
+            )
         conn.commit()
     finally:
         conn.close()
