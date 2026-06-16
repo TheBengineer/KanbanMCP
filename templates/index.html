@@ -27,24 +27,24 @@
 </head>
 <body hx-headers='{"Accept": "text/html"}'>
   <div id="app">
-    <header class="main-header">
-      <h1>Kanban Board <span class="version-tag">{{ version }}</span></h1>
+    <header class="main-header flex items-center justify-between px-6 py-4 border-b border-border">
+      <h1 class="text-xl font-bold text-white">Kanban Board <span class="version-tag text-muted text-sm font-normal ml-2">{{ version }}</span></h1>
     </header>
 
     <div id="boards">
       {% if boards %}
-        <div class="board-section" style="opacity:0.6">
-          <div class="board-footer">
-            <form class="board-form" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
-              <input type="text" name="name" placeholder="New board name" required>
-              <button type="submit" class="btn-add">+ New Board</button>
+        <div class="board-section opacity-60 mb-6">
+          <div class="board-footer mb-3">
+            <form class="board-form flex gap-2 max-w-sm" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
+              <input type="text" name="name" placeholder="New board name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
+              <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New Board</button>
             </form>
           </div>
         </div>
         {% for board in boards %}
-        <div class="board-section" id="board-section-{{ board.id }}">
-          <div class="board-header-row">
-            <h2>{{ board.name }}</h2>
+        <div class="board-section mb-6" id="board-section-{{ board.id }}">
+          <div class="board-header-row flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-white">{{ board.name }}</h2>
             <button
               hx-delete="/boards/{{ board.id }}"
               hx-target="#board-section-{{ board.id }}"
@@ -54,19 +54,19 @@
             >Delete</button>
           </div>
 
-          <div class="board-footer">
-            <form class="board-form" hx-post="/boards/{{ board.id }}/lists" hx-target="#boards" hx-swap="outerHTML">
-              <input type="text" name="name" placeholder="New list name" required>
-              <button type="submit" class="btn-add">+ New List</button>
+          <div class="board-footer mb-3">
+            <form class="board-form flex gap-2" hx-post="/boards/{{ board.id }}/lists" hx-target="#boards" hx-swap="outerHTML">
+              <input type="text" name="name" placeholder="New list name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
+              <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New List</button>
             </form>
           </div>
 
           <div class="board" data-board-id="{{ board.id }}">
             {% if board.lists %}
               {% for lst in board.lists %}
-              <div class="list" id="list-{{ lst.id }}">
-                <div class="list-header">
-                  <h2>{{ lst.name }}</h2>
+              <div class="list bg-cardbg rounded-lg p-3 min-w-[260px] border border-border" id="list-{{ lst.id }}">
+                <div class="list-header flex items-center justify-between mb-2">
+                  <h2 class="font-semibold text-white text-sm">{{ lst.name }}</h2>
                   <button
                     hx-delete="/lists/{{ lst.id }}"
                     hx-target="#list-{{ lst.id }}"
@@ -77,8 +77,8 @@
 
                 <div class="cards" id="cards-{{ lst.id }}" data-list-id="{{ lst.id }}">
                   {% for card in lst.cards %}
-                  <div class="card" id="card-{{ card.id }}" data-card-id="{{ card.id }}">
-                    <div class="card-title">{{ card.title }}</div>
+                  <div class="card bg-[#1e2a45] rounded-md p-3 mb-2 border border-border" id="card-{{ card.id }}" data-card-id="{{ card.id }}">
+                    <div class="card-title font-medium text-white text-sm mb-1">{{ card.title }}</div>
 
                     <div id="subtasks-{{ card.id }}">
                       {% if card.subtasks %}
@@ -117,7 +117,7 @@
                     </div>
                     {% endif %}
 
-                    <div class="card-actions">
+                    <div class="card-actions flex gap-2 mt-2 pt-2 border-t border-border">
                       <button hx-get="/cards/{{ card.id }}" hx-target="#modal" class="btn-add">Edit</button>
                       <button hx-delete="/cards/{{ card.id }}"
                               hx-target="#card-{{ card.id }}"
@@ -128,17 +128,17 @@
                   {% endfor %}
                 </div>
 
-                <div class="list-footer" style="padding:4px">
-                  <form class="board-form" hx-post="/lists/{{ lst.id }}/cards" hx-target="#cards-{{ lst.id }}" hx-swap="beforeend">
-                    <input type="text" name="title" placeholder="Card title..." required>
-                    <button type="submit" class="btn-add">+</button>
+                <div class="list-footer p-1">
+                  <form class="board-form flex gap-1" hx-post="/lists/{{ lst.id }}/cards" hx-target="#cards-{{ lst.id }}" hx-swap="beforeend">
+                    <input type="text" name="title" placeholder="Card title..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
+                    <button type="submit" class="btn-add px-2 py-1 rounded bg-accent text-white text-xs">+</button>
                   </form>
                 </div>
               </div>
               {% endfor %}
             {% else %}
-              <div class="list" style="min-width:280px;background:transparent;box-shadow:none">
-                <div class="empty-state">
+              <div class="list min-w-[280px] bg-transparent shadow-none">
+                <div class="empty-state text-center py-8 text-muted">
                   <p>No lists yet. Create one above.</p>
                 </div>
               </div>
@@ -149,12 +149,12 @@
         {% endfor %}
 
       {% else %}
-      <div class="empty-state">
-        <h2>Welcome to Kanban!</h2>
-        <p>No boards yet. Create your first board to get started.</p>
-        <form class="board-form" style="max-width:360px;margin:0 auto" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
-          <input type="text" name="name" placeholder="Board name" required>
-          <button type="submit" class="btn-add">Create Board</button>
+      <div class="empty-state text-center py-16">
+        <h2 class="text-2xl font-bold text-white mb-2">Welcome to Kanban!</h2>
+        <p class="text-muted mb-6">No boards yet. Create your first board to get started.</p>
+        <form class="board-form flex gap-2 max-w-sm mx-auto" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
+          <input type="text" name="name" placeholder="Board name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
+          <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">Create Board</button>
         </form>
       </div>
       {% endif %}
