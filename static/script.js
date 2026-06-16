@@ -17,18 +17,38 @@ function initSortable(container) {
   });
 }
 
+function initSubtaskSortable(container) {
+  if (container.sortable) return;
+  container.sortable = new Sortable(container, {
+    animation: 150,
+    ghostClass: "card-ghost",
+    onEnd: function (evt) {
+      const subtaskId = evt.item.id.replace("subtask-", "");
+      const position = (evt.newIndex + 1) * 1000;
+      htmx.ajax("PATCH", "/subtasks/" + subtaskId + "/move", {
+        values: { position: position },
+      });
+    },
+  });
+}
+
 document.querySelectorAll(".cards").forEach(initSortable);
+document.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
 
 /* ── HTMX Event Handlers ── */
 
-// After HTMX swaps new content, init Sortable on fresh .cards containers
+// After HTMX swaps new content, init Sortable on fresh containers
 document.body.addEventListener("htmx:afterSettle", function (evt) {
-  evt.detail.target.querySelectorAll(".cards").forEach(initSortable);
+  var target = evt.detail.target;
+  if (!target) return;
+  target.querySelectorAll(".cards").forEach(initSortable);
+  target.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
 });
 
-// After any card move completes, trigger a board-wide refresh
+// After any card/subtask move completes, trigger a board-wide refresh
 document.body.addEventListener("htmx:afterRequest", function (evt) {
-  if (evt.detail.pathInfo.requestPath.indexOf("/move") !== -1) {
+  var pathInfo = evt.detail.pathInfo;
+  if (pathInfo && pathInfo.requestPath && pathInfo.requestPath.indexOf("/move") !== -1) {
     htmx.trigger("body", "boardRefresh");
   }
 });

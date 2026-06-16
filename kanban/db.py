@@ -339,6 +339,35 @@ def move_card(card_id: int, target_list_id: int, position: int) -> None:
         conn.close()
 
 
+def move_subtask(subtask_id: int, position: int) -> None:
+    """Move subtask to new position within its card, then renumber."""
+    conn = get_conn()
+    try:
+        row = conn.execute("SELECT card_id FROM subtasks WHERE id = ?", (subtask_id,)).fetchone()
+        if row is None:
+            return
+        card_id = row["card_id"]
+        rows = conn.execute(
+            "SELECT id FROM subtasks WHERE card_id = ? ORDER BY position, id",
+            (card_id,),
+        ).fetchall()
+        ids = [r["id"] for r in rows]
+        if subtask_id not in ids:
+            return
+        target_index = (position // 1000) - 1
+        ids.remove(subtask_id)
+        target_index = max(0, min(target_index, len(ids)))
+        ids.insert(target_index, subtask_id)
+        for i, sid in enumerate(ids):
+            conn.execute(
+                "UPDATE subtasks SET position = ? WHERE id = ?",
+                ((i + 1) * 1000, sid),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def create_subtask(card_id: int, name: str) -> Subtask:
     """INSERT subtask with auto-position."""
     conn = get_conn()

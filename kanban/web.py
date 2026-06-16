@@ -19,6 +19,7 @@ from kanban.db import (
     create_subtask,
     toggle_subtask,
     delete_subtask,
+    move_subtask,
     init_db,
 )
 
@@ -46,19 +47,17 @@ async def startup():
 
 
 def _card_html(card) -> str:
-    subs = "".join(
-        f"""<label class="subtask-item">
-            <input type="checkbox" class="subtask-checkbox"
-                   hx-patch="/subtasks/{sub.id}/toggle"
-                   hx-target="#subtasks-{card.id}"
-                   {"checked" if sub.is_completed else ""}>
-            <span>{sub.name}</span>
-          </label>"""
-        for sub in card.subtasks[:3]
-    )
+    progress = ""
+    if card.subtasks:
+        done = sum(1 for s in card.subtasks if s.is_completed)
+        total = len(card.subtasks)
+        progress = f'<div class="subtask-progress">{done}/{total} done</div>'
+
+    subs = "".join(_subtask_row(s, f"subtasks-{card.id}") for s in card.subtasks[:3])
     more = ""
     if len(card.subtasks) > 3:
         more = f'<span class="more-subtasks">+{len(card.subtasks) - 3} more</span>'
+
     desc = ""
     if card.description:
         preview = card.description[:80]
@@ -68,7 +67,16 @@ def _card_html(card) -> str:
 
     return f"""<div class="card" id="card-{card.id}" data-card-id="{card.id}">
   <div class="card-title">{card.title}</div>
-  <div id="subtasks-{card.id}" class="subtask-list">{subs}{more}</div>
+  {progress}
+  <div id="subtasks-{card.id}" class="subtask-list">
+    {subs}{more}
+  </div>
+  <form hx-post="/cards/{card.id}/subtasks"
+        hx-target="#subtasks-{card.id}"
+        hx-swap="innerHTML"
+        class="board-form" style="margin-top:4px">
+    <input type="text" name="name" placeholder="Add task..." required>
+  </form>
   {desc}
   <div class="card-actions">
     <button hx-get="/cards/{card.id}" hx-target="#modal" class="btn-add">Edit</button>
@@ -81,21 +89,25 @@ def _card_html(card) -> str:
 
 
 def _subtask_list_html(card_id: int, subtasks: list) -> str:
-    items = "".join(
-        f"""<label class="subtask-item" id="subtask-{s.id}">
+    items = "".join(_subtask_row(s, f"subtasks-list-{card_id}") for s in subtasks)
+    return f'<div id="subtasks-list-{card_id}" class="subtask-list">{items}</div>'
+
+
+def _subtask_row(sub, container_id: str) -> str:
+    """Render a single subtask <label> element for HTMX swap."""
+    checked = 'checked' if sub.is_completed else ''
+    return f'''<label class="subtask-item" id="subtask-{sub.id}">
       <input type="checkbox" class="subtask-checkbox"
-             hx-patch="/subtasks/{s.id}/toggle"
-             hx-target="#subtasks-list-{card_id}"
-             {"checked" if s.is_completed else ""}>
-      <span>{s.name}</span>
-      <button hx-delete="/subtasks/{s.id}"
-              hx-target="#subtask-{s.id}"
+             hx-patch="/subtasks/{sub.id}/toggle"
+             hx-target="#{container_id}"
+             hx-swap="innerHTML"
+             {checked}>
+      <span>{sub.name}</span>
+      <button hx-delete="/subtasks/{sub.id}"
+              hx-target="#subtask-{sub.id}"
               hx-swap="delete"
               class="btn-danger">×</button>
-    </label>"""
-        for s in subtasks
-    )
-    return f'<div id="subtasks-list-{card_id}" class="subtask-list">{items}</div>'
+    </label>'''
 
 
 # ── Board Routes ──────────────────────────────────────────────────────────
@@ -225,6 +237,12 @@ async def move_card_route(card_id: int, list_id: int = Form(...), position: int 
     return HTMLResponse(content="", headers={"HX-Trigger": "boardRefresh"})
 
 
+@app.patch("/subtasks/{subtask_id}/move", response_class=HTMLResponse)
+async def move_subtask_route(subtask_id: int, position: int = Form(...)):
+    move_subtask(subtask_id, position)
+    return HTMLResponse(content="", headers={"HX-Trigger": "boardRefresh"})
+
+
 # ── Subtask Routes ────────────────────────────────────────────────────────
 
 
@@ -333,14 +351,14 @@ def _render_boards_html(boards) -> str:
             hx-swap="delete"
             class="btn-danger">×</button>
   </div>
-  <div class="board">
-    {lists_html}
-  </div>
   <div class="board-footer">
     <form class="board-form" hx-post="/boards/{b.id}/lists" hx-target="#boards" hx-swap="outerHTML">
       <input type="text" name="name" placeholder="New list name" required>
       <button type="submit" class="btn-add">+ New List</button>
     </form>
+  </div>
+  <div class="board">
+    {lists_html}
   </div>
 </div>"""
 
