@@ -78,6 +78,7 @@ def _card_html(card) -> str:
         hx-swap="innerHTML"
         class="board-form" style="margin-top:4px">
     <input type="text" name="name" placeholder="Add task..." required>
+    <button type="submit" class="btn-add">+</button>
   </form>
   {desc}
   <div class="card-actions">

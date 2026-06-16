@@ -32,56 +32,58 @@ function initSubtaskSortable(container) {
   });
 }
 
-document.querySelectorAll(".cards").forEach(initSortable);
-document.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
+/* ── Boot ── */
 
-/* ── HTMX Event Handlers ── */
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".cards").forEach(initSortable);
+  document.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
 
-// Before HTMX swaps, destroy Sortable instances on swapped-out elements
-document.body.addEventListener("htmx:beforeSwap", function (evt) {
-  var target = evt.detail.target;
-  if (!target) return;
-  target.querySelectorAll(".cards, .subtask-list").forEach(function (el) {
-    if (el.sortable) {
-      el.sortable.destroy();
-      el.sortable = null;
+  // Before HTMX swaps, destroy Sortable instances on swapped-out elements
+  document.body.addEventListener("htmx:beforeSwap", function (evt) {
+    var target = evt.detail.target;
+    if (!target) return;
+    target.querySelectorAll(".cards, .subtask-list").forEach(function (el) {
+      if (el.sortable) {
+        el.sortable.destroy();
+        el.sortable = null;
+      }
+    });
+  });
+
+  // After HTMX swaps new content, init Sortable on fresh containers
+  document.body.addEventListener("htmx:afterSettle", function (evt) {
+    var target = evt.detail.target;
+    if (!target) return;
+    target.querySelectorAll(".cards").forEach(initSortable);
+    target.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
+  });
+
+  // After any card/subtask move completes, trigger a board-wide refresh
+  document.body.addEventListener("htmx:afterRequest", function (evt) {
+    var pathInfo = evt.detail.pathInfo;
+    if (pathInfo && pathInfo.requestPath && pathInfo.requestPath.indexOf("/move") !== -1) {
+      htmx.trigger("body", "boardRefresh");
     }
   });
-});
 
-// After HTMX swaps new content, init Sortable on fresh containers
-document.body.addEventListener("htmx:afterSettle", function (evt) {
-  var target = evt.detail.target;
-  if (!target) return;
-  target.querySelectorAll(".cards").forEach(initSortable);
-  target.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
-});
+  // Close modal on overlay click (not on content click)
+  document.addEventListener("click", function (evt) {
+    var overlay = evt.target.closest(".modal-overlay");
+    if (overlay && evt.target === overlay) {
+      overlay.classList.remove("active");
+    }
+  });
 
-// After any card/subtask move completes, trigger a board-wide refresh
-document.body.addEventListener("htmx:afterRequest", function (evt) {
-  var pathInfo = evt.detail.pathInfo;
-  if (pathInfo && pathInfo.requestPath && pathInfo.requestPath.indexOf("/move") !== -1) {
-    htmx.trigger("body", "boardRefresh");
-  }
-});
+  // Close modal on Escape key
+  document.addEventListener("keydown", function (evt) {
+    if (evt.key === "Escape") {
+      var modal = document.getElementById("modal");
+      if (modal) modal.innerHTML = "";
+    }
+  });
 
-// Close modal on overlay click (not on content click)
-document.addEventListener("click", function (evt) {
-  var overlay = evt.target.closest(".modal-overlay");
-  if (overlay && evt.target === overlay) {
-    overlay.classList.remove("active");
-  }
-});
-
-// Close modal on Escape key
-document.addEventListener("keydown", function (evt) {
-  if (evt.key === "Escape") {
-    var modal = document.getElementById("modal");
-    if (modal) modal.innerHTML = "";
-  }
-});
-
-// Listen for boardRefresh event — triggers a full page reload
-document.addEventListener("boardRefresh", function () {
-  window.location.reload();
+  // Listen for boardRefresh event — triggers a full page reload
+  document.addEventListener("boardRefresh", function () {
+    window.location.reload();
+  });
 });
