@@ -116,10 +116,27 @@ def _subtask_row(sub, container_id: str) -> str:
 _mcp_server = MCPServer()
 
 
+@app.get("/mcp")
+async def mcp_health():
+    """MCP endpoint info. GET returns capabilities, POST handles JSON-RPC."""
+    return JSONResponse({
+        "endpoint": "MCP Streamable HTTP",
+        "protocol": "2024-11-05",
+        "transport": "http",
+        "tools": len(_mcp_server.tool_definitions),
+    })
+
+
 @app.post("/mcp")
 async def mcp_http_endpoint(request: Request):
     """JSON-RPC 2.0 MCP endpoint over HTTP. Accepts POST with JSON body."""
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            content={"jsonrpc": "2.0", "error": {"code": -32700, "message": "Parse error"}, "id": None},
+            status_code=400,
+        )
     result = _mcp_server.handle_json_rpc(body)
     if result is None:
         return JSONResponse(content=None, status_code=200)

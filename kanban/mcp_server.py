@@ -173,14 +173,16 @@ class MCPServer:
         params = msg.get("params", {})
 
         if method == "initialize":
-            return {
+            result = {
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {
-                    "protocolVersion": "2024-11-05",
+                    "protocolVersion": params.get("protocolVersion", "2024-11-05"),
                     "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "kanban-mcp", "version": "0.1.0"},
                 },
             }
+            return result
         elif method == "notifications/initialized":
             self.initialized = True
             return None
