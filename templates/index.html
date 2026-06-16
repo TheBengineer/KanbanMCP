@@ -29,6 +29,13 @@
             >×</button>
           </div>
 
+          <div class="board-footer">
+            <form class="board-form" hx-post="/boards/{{ board.id }}/lists" hx-target="#boards" hx-swap="outerHTML">
+              <input type="text" name="name" placeholder="New list name" required>
+              <button type="submit" class="btn-add">+ New List</button>
+            </form>
+          </div>
+
           <div class="board">
             {% if board.lists %}
               {% for lst in board.lists %}
@@ -49,23 +56,37 @@
                     <div class="card-title">{{ card.title }}</div>
 
                     {% if card.subtasks %}
+                    {% set done = card.subtasks | selectattr('is_completed') | list | length %}
+                    {% set total = card.subtasks | length %}
+                    <div class="subtask-progress">{{ done }}/{{ total }} done</div>
+                    {% endif %}
+
                     <div id="subtasks-{{ card.id }}" class="subtask-list">
                       {% for sub in card.subtasks[:3] %}
-                      <label class="subtask-item">
-                        <input
-                          type="checkbox" class="subtask-checkbox"
-                          hx-patch="/subtasks/{{ sub.id }}/toggle"
-                          hx-target="#subtasks-{{ card.id }}"
-                          {{ 'checked' if sub.is_completed else '' }}
-                        >
+                      <label class="subtask-item" id="subtask-{{ sub.id }}">
+                        <input type="checkbox" class="subtask-checkbox"
+                               hx-patch="/subtasks/{{ sub.id }}/toggle"
+                               hx-target="#subtasks-{{ card.id }}"
+                               hx-swap="innerHTML"
+                               {{ 'checked' if sub.is_completed else '' }}>
                         <span>{{ sub.name }}</span>
+                        <button hx-delete="/subtasks/{{ sub.id }}"
+                                hx-target="#subtask-{{ sub.id }}"
+                                hx-swap="delete"
+                                class="btn-danger">×</button>
                       </label>
                       {% endfor %}
                       {% if card.subtasks|length > 3 %}
                       <span class="more-subtasks">+{{ card.subtasks|length - 3 }} more</span>
                       {% endif %}
                     </div>
-                    {% endif %}
+
+                    <form hx-post="/cards/{{ card.id }}/subtasks"
+                          hx-target="#subtasks-{{ card.id }}"
+                          hx-swap="innerHTML"
+                          class="board-form" style="margin-top:4px">
+                      <input type="text" name="name" placeholder="Add task..." required>
+                    </form>
 
                     {% if card.description %}
                     <div class="notes-preview">
@@ -74,17 +95,11 @@
                     {% endif %}
 
                     <div class="card-actions">
-                      <button
-                        hx-get="/cards/{{ card.id }}"
-                        hx-target="#modal"
-                        class="btn-add"
-                      >Edit</button>
-                      <button
-                        hx-delete="/cards/{{ card.id }}"
-                        hx-target="#card-{{ card.id }}"
-                        hx-swap="delete"
-                        class="btn-danger"
-                      >×</button>
+                      <button hx-get="/cards/{{ card.id }}" hx-target="#modal" class="btn-add">Edit</button>
+                      <button hx-delete="/cards/{{ card.id }}"
+                              hx-target="#card-{{ card.id }}"
+                              hx-swap="delete"
+                              class="btn-danger">×</button>
                     </div>
                   </div>
                   {% endfor %}
@@ -101,18 +116,12 @@
             {% else %}
               <div class="list" style="min-width:280px;background:transparent;box-shadow:none">
                 <div class="empty-state">
-                  <p>No lists yet. Create one below.</p>
+                  <p>No lists yet. Create one above.</p>
                 </div>
               </div>
             {% endif %}
           </div>
 
-          <div class="board-footer">
-            <form class="board-form" hx-post="/boards/{{ board.id }}/lists" hx-target="#boards" hx-swap="outerHTML">
-              <input type="text" name="name" placeholder="New list name" required>
-              <button type="submit" class="btn-add">+ New List</button>
-            </form>
-          </div>
         </div>
         {% endfor %}
 
