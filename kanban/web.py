@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 import os
+from fastapi.responses import JSONResponse
 
 from kanban.db import (
     get_boards,
@@ -22,6 +23,7 @@ from kanban.db import (
     move_subtask,
     init_db,
 )
+from kanban.mcp_server import MCPServer
 
 templates_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
@@ -108,6 +110,21 @@ def _subtask_row(sub, container_id: str) -> str:
               hx-swap="delete"
               class="btn-danger">×</button>
     </label>'''
+
+
+# ── MCP HTTP Endpoint ────────────────────────────────────────────────────
+
+_mcp_server = MCPServer()
+
+
+@app.post("/mcp")
+async def mcp_http_endpoint(request: Request):
+    """JSON-RPC 2.0 MCP endpoint over HTTP. Accepts POST with JSON body."""
+    body = await request.json()
+    result = _mcp_server.handle_json_rpc(body)
+    if result is None:
+        return JSONResponse(content=None, status_code=200)
+    return JSONResponse(content=result)
 
 
 # ── Board Routes ──────────────────────────────────────────────────────────

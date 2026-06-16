@@ -158,57 +158,55 @@ class MCPServer:
         self.initialized = False
 
     def handle_message(self, raw: str) -> str | None:
-        """Parse JSON-RPC message and return response (or None for notifications)."""
+        """Parse JSON-RPC message and return JSON response string (or None for notifications)."""
         try:
             msg = json.loads(raw)
         except json.JSONDecodeError:
             return None
+        result = self.handle_json_rpc(msg)
+        return json.dumps(result) if result else None
 
+    def handle_json_rpc(self, msg: dict) -> dict | None:
+        """Handle a parsed JSON-RPC request dict and return response dict (or None for notifications)."""
         method = msg.get("method")
         msg_id = msg.get("id")
         params = msg.get("params", {})
 
         if method == "initialize":
-            return self._handle_initialize(msg_id, params)
+            return {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {"tools": {}},
+                },
+            }
         elif method == "notifications/initialized":
             self.initialized = True
             return None
         elif method == "tools/list":
-            return self._handle_tools_list(msg_id)
+            return {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"tools": self.tool_definitions},
+            }
         elif method == "tools/call":
             return self._handle_tools_call(msg_id, params)
         else:
             return self._error(msg_id, -32601, f"Method not found: {method}")
-
-    def _handle_initialize(self, msg_id, params):
-        return json.dumps({
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "result": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
-            },
-        })
-
-    def _handle_tools_list(self, msg_id):
-        return json.dumps({
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "result": {"tools": self.tool_definitions},
-        })
 
     def _handle_tools_call(self, msg_id, params):
         name = params.get("name", "")
         args = params.get("arguments", {})
         try:
             result = self._dispatch(name, args)
-            return json.dumps({
+            return {
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {
                     "content": [{"type": "text", "text": json.dumps(result, default=str)}]
                 },
-            })
+            }
         except Exception as e:
             return self._error(msg_id, -32603, str(e))
 
@@ -263,11 +261,11 @@ class MCPServer:
             raise ValueError(f"Unknown tool: {name}")
 
     def _error(self, msg_id, code, message):
-        return json.dumps({
+        return {
             "jsonrpc": "2.0",
             "id": msg_id,
             "error": {"code": code, "message": message},
-        })
+        }
 
 
 def main():

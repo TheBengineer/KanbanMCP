@@ -142,6 +142,22 @@ Add to your `.opencode/opencode.jsonc`:
 }
 ```
 
+### HTTP (Network)
+
+The MCP server is also available as an HTTP endpoint on the web server:
+
+```jsonc
+{
+  "mcpServers": {
+    "kanban": {
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+This enables remote access — replace `localhost` with the server's hostname or IP to connect from other machines.
+
 ## OpenCode Skills Plugin
 
 An OpenCode skill at `kanban/SKILL.md` teaches LLM agents how to correctly interact with this kanban board.
