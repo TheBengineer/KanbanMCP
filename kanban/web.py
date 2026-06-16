@@ -122,11 +122,10 @@ _mcp_server = MCPServer()
 @app.get("/mcp")
 async def mcp_sse(request: Request):
     """MCP Streamable HTTP — SSE endpoint. Keeps connection alive for server messages."""
+    base = str(request.base_url).rstrip("/")
 
     async def event_stream() -> AsyncGenerator[str, None]:
-        # Send the endpoint event so the client knows where to POST
-        yield f"event: endpoint\ndata: /mcp\n\n"
-        # Keep the connection alive — send periodic keepalive comments
+        yield f"event: endpoint\ndata: {base}/mcp\n\n"
         try:
             while True:
                 yield ": keepalive\n\n"
