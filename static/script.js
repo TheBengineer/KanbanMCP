@@ -32,11 +32,34 @@ function initSubtaskSortable(container) {
   });
 }
 
+/* ── Progress Bar ── */
+
+function updateProgress(ctx) {
+  (ctx || document).querySelectorAll(".card").forEach(function (card) {
+    var el = card.querySelector(".subtask-progress");
+    var checks = card.querySelectorAll(".subtask-checkbox");
+    if (!el || !checks.length) {
+      if (el) el.style.display = "none";
+      return;
+    }
+    var done = card.querySelectorAll(".subtask-checkbox:checked").length;
+    el.textContent = done + "/" + checks.length + " done";
+    el.style.display = "";
+  });
+}
+
+document.addEventListener("click", function (evt) {
+  if (evt.target.closest(".subtask-checkbox")) {
+    setTimeout(function () { updateProgress(evt.target.closest(".card") ? null : document); }, 50);
+  }
+});
+
 /* ── Boot ── */
 
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".cards").forEach(initSortable);
   document.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
+  updateProgress(document);
 
   // Before HTMX swaps, destroy Sortable instances only on targeted sub-elements
   document.body.addEventListener("htmx:beforeSwap", function (evt) {
@@ -50,12 +73,13 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // After HTMX swaps new content, init Sortable on fresh containers
+  // After HTMX swaps new content, init Sortable and update progress on fresh containers
   document.body.addEventListener("htmx:afterSettle", function (evt) {
     var target = evt.detail.target;
     if (!target) return;
     target.querySelectorAll(".cards").forEach(initSortable);
     target.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
+    updateProgress(target);
   });
 
   // After any card move completes, trigger a board-wide refresh
