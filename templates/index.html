@@ -34,7 +34,8 @@
               hx-target="#board-section-{{ board.id }}"
               hx-swap="delete"
               class="btn-danger"
-            >×</button>
+              onclick="return confirm('Delete this board and all its lists and cards?')"
+            >Delete</button>
           </div>
 
           <div class="board-footer">

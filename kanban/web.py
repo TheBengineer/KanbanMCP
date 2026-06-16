@@ -419,7 +419,8 @@ def _render_boards_html(boards) -> str:
     <button hx-delete="/boards/{b.id}"
             hx-target="#board-section-{b.id}"
             hx-swap="delete"
-            class="btn-danger">×</button>
+            class="btn-danger"
+            onclick="return confirm('Delete this board and all its lists and cards?')">Delete</button>
   </div>
   <div class="board-footer">
     <form class="board-form" hx-post="/boards/{b.id}/lists" hx-target="#boards" hx-swap="outerHTML">
