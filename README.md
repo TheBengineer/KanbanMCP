@@ -1,8 +1,10 @@
 # Kanban — Python Kanban Board with Web UI + MCP
 
-A lightweight kanban board for local use — web UI for humans, MCP server for LLMs. No Docker, no Node.js, no database server. One SQLite file, two processes.
+A lightweight kanban board for local use — web UI for humans, MCP server for LLMs. No Node.js, no database server. One SQLite file, two processes.
 
 ## Quick Start
+
+### Native (no Docker)
 
 ```bash
 # 1. Create virtual environment and install
@@ -14,7 +16,16 @@ pip install fastapi uvicorn pydantic jinja2 python-multipart
 python kanban.py web
 ```
 
-Open **[http://localhost:8080](http://localhost:8080)** in your browser. The database (`kanban/kanban.db`) is auto-created on first run.
+### Docker
+
+```bash
+# Build and start the web server
+docker compose up -d
+```
+
+Open **[http://localhost:8080](http://localhost:8080)** in your browser. The database is persisted in a Docker volume (`kanban-data`).
+
+The database (`kanban/kanban.db`) is auto-created on first run.
 
 ## Usage
 
@@ -68,6 +79,8 @@ Board (id, name, created_at)
 ## Project Structure
 
 ```
+Dockerfile            Docker image definition
+docker-compose.yml    Docker Compose service definition
 kanban.py              CLI entry point (web / mcp modes)
 kanban/
   __init__.py
@@ -76,6 +89,7 @@ kanban/
   web.py               FastAPI web server + HTMX routes
   mcp_server.py        MCP stdio server (JSON-RPC 2.0)
   kanban.db            SQLite database (auto-created)
+  SKILL.md             OpenCode skills plugin
 templates/
   index.html           Jinja2 board template
 static/
@@ -100,6 +114,8 @@ All 138 tests pass.
 
 ## opencode Integration
 
+### Native
+
 Add to your `.opencode/opencode.jsonc`:
 
 ```jsonc
@@ -111,6 +127,35 @@ Add to your `.opencode/opencode.jsonc`:
     }
   }
 }
+```
+
+### Docker
+
+```jsonc
+{
+  "mcpServers": {
+    "kanban": {
+      "command": "docker",
+      "args": ["exec", "-i", "kanban-web", "python", "kanban.py", "mcp"]
+    }
+  }
+}
+```
+
+## OpenCode Skills Plugin
+
+An OpenCode skill at `kanban/SKILL.md` teaches LLM agents how to correctly interact with this kanban board.
+
+The skill is auto-discovered when your prompt mentions trigger keywords (kanban, board, card, list, subtask, ticket). No config files or symlinks needed.
+
+**Activation:** Mention "kanban board" or "create a ticket" in any prompt — the skill loads automatically with guidance on the MCP tools, data model invariants, and anti-patterns.
+
+**Verification:** The skill is active if OpenCode responds knowing about position semantics, cascade rules, and the connection lifecycle without you explaining them.
+
+**Global install (optional):** For use across projects:
+```bash
+mkdir -p ~/.claude/skills/kanban/
+ln -s $(pwd)/kanban/SKILL.md ~/.claude/skills/kanban/SKILL.md
 ```
 
 ## Architecture
