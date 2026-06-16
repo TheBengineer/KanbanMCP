@@ -4,9 +4,4 @@ services:
     container_name: kanban-web
     ports:
       - "8080:8080"
-    volumes:
-      - kanban-data:/app/kanban
     restart: unless-stopped
-
-volumes:
-  kanban-data:
