@@ -20,7 +20,7 @@ python kanban.py
 
 ```bash
 # Build and start the web server
-docker compose up -d
+docker compose up -d --build
 ```
 
 Open **[http://localhost:8080](http://localhost:8080)** in your browser. The database is persisted in a Docker volume (`kanban-data`).
