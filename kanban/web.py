@@ -182,7 +182,7 @@ async def mcp_http_endpoint(request: Request):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     boards = get_boards()
-    return templates.TemplateResponse(request, "index.html", {"boards": boards})
+    return templates.TemplateResponse(request, "index.html", {"boards": boards, "version": GIT_HASH})
 
 
 @app.post("/boards", response_class=HTMLResponse)
