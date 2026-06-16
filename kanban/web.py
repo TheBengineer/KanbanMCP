@@ -25,6 +25,7 @@ from kanban.db import (
     create_list,
     update_list,
     delete_list,
+    move_list,
     create_card,
     update_card,
     delete_card,
@@ -216,6 +217,12 @@ async def update_list_route(list_id: int, name: str = Form(...)):
         raise HTTPException(status_code=404, detail="List not found")
     boards = get_boards()
     return _render_boards_html(boards)
+
+
+@app.patch("/lists/{list_id}/move", response_class=HTMLResponse)
+async def move_list_route(list_id: int, board_id: int = Form(...), position: int = Form(...)):
+    move_list(list_id, board_id, position)
+    return HTMLResponse(content="", headers={"HX-Trigger": "boardRefresh"})
 
 
 @app.delete("/lists/{list_id}", response_class=HTMLResponse)
@@ -428,7 +435,7 @@ def _render_boards_html(boards) -> str:
       <button type="submit" class="btn-add">+ New List</button>
     </form>
   </div>
-  <div class="board">
+  <div class="board" data-board-id="{b.id}">
     {lists_html}
   </div>
 </div>"""

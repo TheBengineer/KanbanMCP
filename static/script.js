@@ -1,5 +1,21 @@
 /* ── SortableJS Drag-and-Drop ── */
 
+function initListSortable(container) {
+  if (container.sortable) return;
+  container.sortable = new Sortable(container, {
+    animation: 150,
+    ghostClass: "opacity-30",
+    onEnd: function (evt) {
+      var boardId = evt.to.dataset.boardId;
+      var listId = evt.item.id.replace("list-", "");
+      var position = evt.newIndex * 1000;
+      htmx.ajax("PATCH", "/lists/" + listId + "/move", {
+        values: { board_id: boardId, position: position },
+      });
+    },
+  });
+}
+
 function initSortable(container) {
   if (container.sortable) return;
   container.sortable = new Sortable(container, {
@@ -56,7 +72,8 @@ document.addEventListener("click", function (evt) {
 
 /* ── Boot ── */
 
-document.addEventListener("DOMContentLoaded", function () {
+  document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".board").forEach(initListSortable);
   document.querySelectorAll(".cards").forEach(initSortable);
   document.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
   updateProgress(document);
@@ -65,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.body.addEventListener("htmx:beforeSwap", function (evt) {
     var target = evt.detail.target;
     if (!target || target === document.body) return;
-    target.querySelectorAll(".cards, .subtask-list").forEach(function (el) {
+    target.querySelectorAll(".board, .cards, .subtask-list").forEach(function (el) {
       if (el.sortable) {
         el.sortable.destroy();
         el.sortable = null;
@@ -73,10 +90,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // After HTMX swaps new content, init Sortable and update progress on fresh containers
+  // After HTMX swaps new content, init Sortable, update progress, re-scan Tailwind
   document.body.addEventListener("htmx:afterSettle", function (evt) {
     var target = evt.detail.target;
     if (!target) return;
+    if (typeof tailwind !== "undefined" && tailwind.refresh) tailwind.refresh();
+    target.querySelectorAll(".board").forEach(initListSortable);
     target.querySelectorAll(".cards").forEach(initSortable);
     target.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
     updateProgress(target);

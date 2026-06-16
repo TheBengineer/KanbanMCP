@@ -227,6 +227,17 @@ def delete_board(board_id: int) -> None:
         conn.close()
 
 
+def move_list(list_id: int, board_id: int, position: int) -> None:
+    """Move list to a new position (0 = first), then rebalance."""
+    conn = get_conn()
+    try:
+        conn.execute("UPDATE lists SET board_id = ?, position = ? WHERE id = ?", (board_id, position, list_id))
+        conn.commit()
+        _rebalance("lists", "board_id", board_id, conn)
+    finally:
+        conn.close()
+
+
 def create_list(board_id: int, name: str) -> List:
     """INSERT list with auto-position (next 1000 gap)."""
     conn = get_conn()

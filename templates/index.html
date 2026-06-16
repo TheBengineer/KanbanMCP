@@ -4,6 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#1a1a2e',
+            cardbg: '#16213e',
+            accent: '#e94560',
+            muted: '#888',
+            border: '#2a2a4a',
+          }
+        }
+      }
+    }
+  </script>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.6"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -45,7 +61,7 @@
             </form>
           </div>
 
-          <div class="board">
+          <div class="board" data-board-id="{{ board.id }}">
             {% if board.lists %}
               {% for lst in board.lists %}
               <div class="list" id="list-{{ lst.id }}">
