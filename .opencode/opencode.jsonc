@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "kanban": {
+      "command": "python",
+      "args": ["/home/bengi/kanban2/kanban.py", "mcp"]
+    }
+  }
+}
