@@ -203,30 +203,30 @@ async def get_card_modal(card_id: int):
     return f"""<div class="modal-overlay active" id="modal">
   <div class="modal-content">
     <h2>Edit Card</h2>
-    <form hx-patch="/cards/{card.id}" hx-target="#card-{card.id}" hx-swap="outerHTML">
+    <form id="card-form-{card.id}" hx-patch="/cards/{card.id}" hx-target="#card-{card.id}" hx-swap="outerHTML">
       <label>Title</label>
       <input type="text" name="title" value="{card.title}" required>
 
       <label>Description</label>
       <textarea name="description">{card.description}</textarea>
-
-      <label>Subtasks</label>
-      <div id="subtasks-container-{card.id}">
-        {subs}
-        <form hx-post="/cards/{card.id}/subtasks"
-              hx-target="#subtasks-container-{card.id}"
-              hx-swap="innerHTML"
-              class="board-form" style="margin-top:8px">
-          <input type="text" name="name" placeholder="Add subtask..." required>
-          <button type="submit" class="btn-add">Add</button>
-        </form>
-      </div>
-
-      <div class="modal-actions">
-        <button type="submit" class="btn-add">Save</button>
-        <button type="button" onclick="this.closest('.modal-overlay').innerHTML=''" class="btn-danger">Cancel</button>
-      </div>
     </form>
+
+    <label>Subtasks</label>
+    <div id="subtasks-container-{card.id}">
+      {subs}
+      <form hx-post="/cards/{card.id}/subtasks"
+            hx-target="#subtasks-container-{card.id}"
+            hx-swap="innerHTML"
+            class="board-form" style="margin-top:8px">
+        <input type="text" name="name" placeholder="Add subtask..." required>
+        <button type="submit" class="btn-add">Add</button>
+      </form>
+    </div>
+
+    <div class="modal-actions">
+      <button type="submit" form="card-form-{card.id}" class="btn-add">Save</button>
+      <button type="button" onclick="this.closest('.modal-overlay').innerHTML=''" class="btn-danger">Cancel</button>
+    </div>
   </div>
 </div>"""
 
