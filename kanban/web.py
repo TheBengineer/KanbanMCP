@@ -433,7 +433,6 @@ def _render_boards_html(boards) -> str:
 </div>"""
 
     return f"""<div id="boards">
-  {boards_html}
   <div class="board-section" style="opacity:0.6">
     <div class="board-footer">
       <form class="board-form" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
@@ -442,4 +441,5 @@ def _render_boards_html(boards) -> str:
       </form>
     </div>
   </div>
+  {boards_html}
 </div>"""

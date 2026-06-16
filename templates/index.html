@@ -17,6 +17,14 @@
 
     <div id="boards">
       {% if boards %}
+        <div class="board-section" style="opacity:0.6">
+          <div class="board-footer">
+            <form class="board-form" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
+              <input type="text" name="name" placeholder="New board name" required>
+              <button type="submit" class="btn-add">+ New Board</button>
+            </form>
+          </div>
+        </div>
         {% for board in boards %}
         <div class="board-section" id="board-section-{{ board.id }}">
           <div class="board-header-row">
@@ -123,14 +131,6 @@
         </div>
         {% endfor %}
 
-        <div class="board-section" style="opacity:0.6">
-          <div class="board-footer">
-            <form class="board-form" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
-              <input type="text" name="name" placeholder="New board name" required>
-              <button type="submit" class="btn-add">+ New Board</button>
-            </form>
-          </div>
-        </div>
       {% else %}
       <div class="empty-state">
         <h2>Welcome to Kanban!</h2>
