@@ -6,7 +6,17 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from jinja2 import Environment, FileSystemLoader
 import os
 import asyncio
+import subprocess
 from typing import AsyncGenerator
+
+try:
+    GIT_HASH = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        capture_output=True, text=True, timeout=5,
+        cwd=os.path.dirname(__file__),
+    ).stdout.strip()
+except Exception:
+    GIT_HASH = "unknown"
 
 from kanban.db import (
     get_boards,
@@ -116,6 +126,12 @@ def _subtask_row(sub, container_id: str) -> str:
 # ── MCP HTTP Endpoint ────────────────────────────────────────────────────
 
 _mcp_server = MCPServer()
+
+
+@app.get("/version")
+async def version():
+    """Return the current git commit hash."""
+    return JSONResponse({"version": GIT_HASH, "name": "kanban-mcp"})
 
 
 @app.get("/sse")
