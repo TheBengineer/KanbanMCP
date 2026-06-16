@@ -219,6 +219,9 @@ header h1 {
   align-items: center;
   gap: 6px;
 }
+.modal-content .subtask-progress {
+  display: none;
+}
 
 /* ── Card actions row ── */
 .card-actions {

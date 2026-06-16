@@ -69,9 +69,8 @@ def _card_html(card) -> str:
 
     return f"""<div class="card" id="card-{card.id}" data-card-id="{card.id}">
   <div class="card-title">{card.title}</div>
-  {progress}
   <div id="subtasks-{card.id}" class="subtask-list">
-    {subs}{more}
+    {progress}{subs}{more}
   </div>
   <form hx-post="/cards/{card.id}/subtasks"
         hx-target="#subtasks-{card.id}"
@@ -92,8 +91,11 @@ def _card_html(card) -> str:
 
 
 def _subtask_list_html(card_id: int, subtasks: list) -> str:
+    done = sum(1 for s in subtasks if s.is_completed)
+    total = len(subtasks)
+    progress = f'<div class="subtask-progress">{done}/{total} done</div>' if subtasks else ""
     items = "".join(_subtask_row(s, f"subtasks-list-{card_id}") for s in subtasks)
-    return f'<div id="subtasks-list-{card_id}" class="subtask-list">{items}</div>'
+    return f'<div id="subtasks-list-{card_id}" class="subtask-list">{progress}{items}</div>'
 
 
 def _subtask_row(sub, container_id: str) -> str:

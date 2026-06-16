@@ -55,13 +55,12 @@
                   <div class="card" id="card-{{ card.id }}" data-card-id="{{ card.id }}">
                     <div class="card-title">{{ card.title }}</div>
 
-                    {% if card.subtasks %}
-                    {% set done = card.subtasks | selectattr('is_completed') | list | length %}
-                    {% set total = card.subtasks | length %}
-                    <div class="subtask-progress">{{ done }}/{{ total }} done</div>
-                    {% endif %}
-
                     <div id="subtasks-{{ card.id }}" class="subtask-list">
+                      {% if card.subtasks %}
+                      {% set done = card.subtasks | selectattr('is_completed') | list | length %}
+                      {% set total = card.subtasks | length %}
+                      <div class="subtask-progress">{{ done }}/{{ total }} done</div>
+                      {% endif %}
                       {% for sub in card.subtasks[:3] %}
                       <label class="subtask-item" id="subtask-{{ sub.id }}">
                         <input type="checkbox" class="subtask-checkbox"
