@@ -327,54 +327,33 @@ def delete_card(card_id: int) -> None:
 
 
 def move_card(card_id: int, target_list_id: int, position: int) -> None:
-    """Move card to a list at the given position index, then renumber."""
+    """Move card to a list, set position (0 = top), then renumber to 1000-gaps."""
     conn = get_conn()
     try:
-        rows = conn.execute(
-            "SELECT id FROM cards WHERE list_id = ? ORDER BY position, id",
-            (target_list_id,),
-        ).fetchall()
-        ids = [r["id"] for r in rows]
-        if card_id in ids:
-            ids.remove(card_id)
-        target_index = (position // 1000) - 1
-        target_index = max(0, min(target_index, len(ids)))
-        ids.insert(target_index, card_id)
-        for i, cid in enumerate(ids):
-            conn.execute(
-                "UPDATE cards SET list_id = ?, position = ? WHERE id = ?",
-                (target_list_id, (i + 1) * 1000, cid),
-            )
+        conn.execute(
+            "UPDATE cards SET list_id = ?, position = ? WHERE id = ?",
+            (target_list_id, position, card_id),
+        )
         conn.commit()
+        _rebalance("cards", "list_id", target_list_id, conn)
     finally:
         conn.close()
 
 
 def move_subtask(subtask_id: int, position: int) -> None:
-    """Move subtask to new position within its card, then renumber."""
+    """Move subtask to new position (0 = top), then rebalance its card."""
     conn = get_conn()
     try:
         row = conn.execute("SELECT card_id FROM subtasks WHERE id = ?", (subtask_id,)).fetchone()
         if row is None:
             return
         card_id = row["card_id"]
-        rows = conn.execute(
-            "SELECT id FROM subtasks WHERE card_id = ? ORDER BY position, id",
-            (card_id,),
-        ).fetchall()
-        ids = [r["id"] for r in rows]
-        if subtask_id not in ids:
-            return
-        target_index = (position // 1000) - 1
-        ids.remove(subtask_id)
-        target_index = max(0, min(target_index, len(ids)))
-        ids.insert(target_index, subtask_id)
-        for i, sid in enumerate(ids):
-            conn.execute(
-                "UPDATE subtasks SET position = ? WHERE id = ?",
-                ((i + 1) * 1000, sid),
-            )
+        conn.execute(
+            "UPDATE subtasks SET position = ? WHERE id = ?",
+            (position, subtask_id),
+        )
         conn.commit()
+        _rebalance("subtasks", "card_id", card_id, conn)
     finally:
         conn.close()
 

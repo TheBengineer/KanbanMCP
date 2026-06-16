@@ -9,7 +9,7 @@ function initSortable(container) {
     onEnd: function (evt) {
       const cardId = evt.item.dataset.cardId;
       const newListId = evt.to.dataset.listId;
-      const position = (evt.newIndex + 1) * 1000;
+      const position = evt.newIndex * 1000;
       htmx.ajax("PATCH", "/cards/" + cardId + "/move", {
         values: { list_id: newListId, position: position },
       });
@@ -24,7 +24,7 @@ function initSubtaskSortable(container) {
     ghostClass: "card-ghost",
     onEnd: function (evt) {
       const subtaskId = evt.item.id.replace("subtask-", "");
-      const position = (evt.newIndex + 1) * 1000;
+      const position = evt.newIndex * 1000;
       htmx.ajax("PATCH", "/subtasks/" + subtaskId + "/move", {
         values: { position: position },
       });
@@ -58,10 +58,10 @@ document.addEventListener("DOMContentLoaded", function () {
     target.querySelectorAll(".subtask-list").forEach(initSubtaskSortable);
   });
 
-  // After any card/subtask move completes, trigger a board-wide refresh
+  // After any card move completes, trigger a board-wide refresh
   document.body.addEventListener("htmx:afterRequest", function (evt) {
     var pathInfo = evt.detail.pathInfo;
-    if (pathInfo && pathInfo.requestPath && pathInfo.requestPath.indexOf("/move") !== -1) {
+    if (pathInfo && pathInfo.requestPath && pathInfo.requestPath.indexOf("/cards/") !== -1 && pathInfo.requestPath.indexOf("/move") !== -1) {
       htmx.trigger("body", "boardRefresh");
     }
   });
