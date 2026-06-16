@@ -88,8 +88,8 @@ def _card_html(card) -> str:
           hx-target="#subtask-list-{card.id}"
           hx-swap="innerHTML"
           class="board-form" style="margin-top:4px">
-      <input type="text" name="name" placeholder="Add task..." required>
-      <button type="submit" class="btn-add">+</button>
+    <input type="text" name="name" placeholder="Add task..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
+    <button type="submit" class="btn-add px-2 py-1 rounded bg-accent text-white text-xs">+</button>
     </form>
   </div>
   {desc}
@@ -282,8 +282,8 @@ async def get_card_modal(card_id: int):
             hx-target="#subtasks-list-{card.id}"
             hx-swap="innerHTML"
             class="board-form" style="margin-top:8px">
-        <input type="text" name="name" placeholder="Add subtask..." required>
-        <button type="submit" class="btn-add">Add</button>
+        <input type="text" name="name" placeholder="Add subtask..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
+        <button type="submit" class="btn-add px-2 py-1 rounded bg-accent text-white text-xs">Add</button>
       </form>
     </div>
   </div>
