@@ -1,6 +1,6 @@
 # Kanban — Python Kanban Board with Web UI + MCP
 
-A lightweight kanban board for local use — web UI for humans, MCP server for LLMs. No Node.js, no database server. One SQLite file, two processes.
+A lightweight kanban board for local use — web UI for humans, MCP server for LLMs. No Node.js, no database server. One SQLite file, single process.
 
 ## Quick Start
 
@@ -12,8 +12,8 @@ python3 -m venv venv
 source venv/bin/activate
 pip install fastapi uvicorn pydantic jinja2 python-multipart
 
-# 2. Start the web server
-python kanban.py web
+# 2. Start the server (web UI + MCP over HTTP)
+python kanban.py
 ```
 
 ### Docker
@@ -30,10 +30,10 @@ The database (`kanban/kanban.db`) is auto-created on first run.
 ## Usage
 
 ```bash
-# Web UI (default port 8080)
-python kanban.py web
+# Start the server (web UI + MCP over HTTP)
+python kanban.py
 
-# MCP server (stdio, for LLM integration)
+# MCP stdio proxy (for clients that only support stdio transport)
 python kanban.py mcp
 ```
 
@@ -81,7 +81,7 @@ Board (id, name, created_at)
 ```
 Dockerfile            Docker image definition
 docker-compose.yml    Docker Compose service definition
-kanban.py              CLI entry point (web / mcp modes)
+kanban.py              CLI entry point (default: web + MCP, mcp: stdio proxy)
 kanban/
   __init__.py
   models.py            Pydantic data models
@@ -114,7 +114,25 @@ All 138 tests pass.
 
 ## opencode Integration
 
-### Native
+### Primary (HTTP)
+
+The web server exposes an MCP endpoint over HTTP:
+
+```jsonc
+{
+  "mcpServers": {
+    "kanban": {
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+This enables remote access — replace `localhost` with the server's hostname or IP to connect from other machines.
+
+### Legacy (stdio)
+
+#### Native
 
 Add to your `.opencode/opencode.jsonc`:
 
@@ -129,7 +147,7 @@ Add to your `.opencode/opencode.jsonc`:
 }
 ```
 
-### Docker
+#### Docker
 
 ```jsonc
 {
@@ -141,22 +159,6 @@ Add to your `.opencode/opencode.jsonc`:
   }
 }
 ```
-
-### HTTP (Network)
-
-The MCP server is also available as an HTTP endpoint on the web server:
-
-```jsonc
-{
-  "mcpServers": {
-    "kanban": {
-      "url": "http://localhost:8080/mcp"
-    }
-  }
-}
-```
-
-This enables remote access — replace `localhost` with the server's hostname or IP to connect from other machines.
 
 ## OpenCode Skills Plugin
 
@@ -176,7 +178,7 @@ ln -s $(pwd)/kanban/SKILL.md ~/.claude/skills/kanban/SKILL.md
 
 ## Architecture
 
-- **Two processes** — web (FastAPI + uvicorn) and MCP (stdio) share a single SQLite database with WAL mode
+- **Single process** — web (FastAPI + uvicorn) serves both the HTMX UI and the MCP HTTP endpoint
 - **No ORM** — raw `sqlite3` + Pydantic for validation
 - **No auth** — designed for local use
 - **No caching** — every read hits SQLite directly

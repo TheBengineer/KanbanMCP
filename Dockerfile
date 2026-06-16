@@ -21,4 +21,4 @@ RUN mkdir -p /app/kanban
 
 EXPOSE 8080
 
-CMD ["python", "kanban.py", "web"]
+CMD ["python", "kanban.py"]

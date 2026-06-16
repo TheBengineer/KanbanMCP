@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kanban CLI — starts web server or MCP server."""
+"""Kanban CLI — starts web server (default) or MCP stdio proxy."""
 
 import sys
 
@@ -8,25 +8,55 @@ from kanban import db
 from kanban.web import app
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python kanban.py [web|mcp]")
-        print("  web  — Start the web UI at http://localhost:8080")
-        print("  mcp  — Start the MCP server on stdio (for opencode)")
-        sys.exit(1)
+def _mcp_proxy():
+    """Read JSON-RPC from stdin, POST to localhost:8080/mcp, write to stdout."""
+    import json
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
 
-    mode = sys.argv[1]
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        req = Request(
+            "http://localhost:8080/mcp",
+            data=line.encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urlopen(req) as resp:
+                body = resp.read()
+                if body and body.strip():
+                    sys.stdout.write(body.decode().strip() + "\n")
+                    sys.stdout.flush()
+        except URLError as e:
+            msg = f"Web server unreachable (http://localhost:8080): {e.reason}"
+            print(msg, file=sys.stderr)
+            try:
+                req_id = json.loads(line).get("id")
+            except json.JSONDecodeError:
+                req_id = None
+            err = json.dumps({
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {"code": -32000, "message": "Server unavailable. Start with `python kanban.py` first."},
+            })
+            sys.stdout.write(err + "\n")
+            sys.stdout.flush()
+
+
+def main():
     db.init_db()
 
-    if mode == "web":
+    if len(sys.argv) < 2 or sys.argv[1] == "web":
+        if len(sys.argv) >= 2 and sys.argv[1] == "web":
+            print("Note: 'web' arg is now the default. Just run `python kanban.py`.", file=sys.stderr)
         print("Starting kanban web server on http://localhost:8080")
         uvicorn.run(app, host="0.0.0.0", port=8080, log_level="info")
-    elif mode == "mcp":
-        from kanban.mcp_server import main as mcp_main
-
-        mcp_main()
+    elif sys.argv[1] == "mcp":
+        _mcp_proxy()
     else:
-        print(f"Unknown mode: {mode}")
+        print(f"Unknown mode: {sys.argv[1]}")
         print("Usage: python kanban.py [web|mcp]")
         sys.exit(1)
 
