@@ -2,9 +2,11 @@ from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, StreamingResponse
 from jinja2 import Environment, FileSystemLoader
 import os
-from fastapi.responses import JSONResponse
+import asyncio
+from typing import AsyncGenerator
 
 from kanban.db import (
     get_boards,
@@ -116,20 +118,36 @@ def _subtask_row(sub, container_id: str) -> str:
 _mcp_server = MCPServer()
 
 
+@app.get("/sse")
 @app.get("/mcp")
-async def mcp_health():
-    """MCP endpoint info. GET returns capabilities, POST handles JSON-RPC."""
-    return JSONResponse({
-        "endpoint": "MCP Streamable HTTP",
-        "protocol": "2024-11-05",
-        "transport": "http",
-        "tools": len(_mcp_server.tool_definitions),
-    })
+async def mcp_sse(request: Request):
+    """MCP Streamable HTTP — SSE endpoint. Keeps connection alive for server messages."""
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        # Send the endpoint event so the client knows where to POST
+        yield f"event: endpoint\ndata: /mcp\n\n"
+        # Keep the connection alive — send periodic keepalive comments
+        try:
+            while True:
+                yield ": keepalive\n\n"
+                await asyncio.sleep(15)
+        except asyncio.CancelledError:
+            pass
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/mcp")
 async def mcp_http_endpoint(request: Request):
-    """JSON-RPC 2.0 MCP endpoint over HTTP. Accepts POST with JSON body."""
+    """JSON-RPC 2.0 MCP endpoint over HTTP for Streamable HTTP transport."""
     try:
         body = await request.json()
     except Exception:
