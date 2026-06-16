@@ -1,0 +1,19 @@
+[Unit]
+Description=Kanban Board — Web UI + MCP Server
+Documentation=https://github.com/TheBengineer/KanbanMCP
+After=network.target
+
+[Service]
+Type=simple
+User=kanban
+Group=kanban
+WorkingDirectory=/opt/kanban
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kanban/venv/bin/python /opt/kanban/kanban.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
