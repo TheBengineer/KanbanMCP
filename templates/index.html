@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="/static/script.js"></script>
+</head>
+<body hx-headers='{"Accept": "text/html"}'>
+  <div id="app">
+    <header class="main-header">
+      <h1>Kanban Board</h1>
+    </header>
+
+    <div id="boards">
+      {% if boards %}
+        {% for board in boards %}
+        <div class="board-section" id="board-section-{{ board.id }}">
+          <div class="board-header-row">
+            <h2>{{ board.name }}</h2>
+            <button
+              hx-delete="/boards/{{ board.id }}"
+              hx-target="#board-section-{{ board.id }}"
+              hx-swap="delete"
+              class="btn-danger"
+            >×</button>
+          </div>
+
+          <div class="board">
+            {% if board.lists %}
+              {% for lst in board.lists %}
+              <div class="list" id="list-{{ lst.id }}">
+                <div class="list-header">
+                  <h2>{{ lst.name }}</h2>
+                  <button
+                    hx-delete="/lists/{{ lst.id }}"
+                    hx-target="#list-{{ lst.id }}"
+                    hx-swap="delete"
+                    class="btn-danger"
+                  >×</button>
+                </div>
+
+                <div class="cards" id="cards-{{ lst.id }}" data-list-id="{{ lst.id }}">
+                  {% for card in lst.cards %}
+                  <div class="card" id="card-{{ card.id }}" data-card-id="{{ card.id }}">
+                    <div class="card-title">{{ card.title }}</div>
+
+                    {% if card.subtasks %}
+                    <div id="subtasks-{{ card.id }}" class="subtask-list">
+                      {% for sub in card.subtasks[:3] %}
+                      <label class="subtask-item">
+                        <input
+                          type="checkbox" class="subtask-checkbox"
+                          hx-patch="/subtasks/{{ sub.id }}/toggle"
+                          hx-target="#subtasks-{{ card.id }}"
+                          {{ 'checked' if sub.is_completed else '' }}
+                        >
+                        <span>{{ sub.name }}</span>
+                      </label>
+                      {% endfor %}
+                      {% if card.subtasks|length > 3 %}
+                      <span class="more-subtasks">+{{ card.subtasks|length - 3 }} more</span>
+                      {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if card.description %}
+                    <div class="notes-preview">
+                      {{ card.description[:80] }}{% if card.description|length > 80 %}…{% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="card-actions">
+                      <button
+                        hx-get="/cards/{{ card.id }}"
+                        hx-target="#modal"
+                        class="btn-add"
+                      >Edit</button>
+                      <button
+                        hx-delete="/cards/{{ card.id }}"
+                        hx-target="#card-{{ card.id }}"
+                        hx-swap="delete"
+                        class="btn-danger"
+                      >×</button>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+
+                <div class="list-footer" style="padding:4px">
+                  <form class="board-form" hx-post="/lists/{{ lst.id }}/cards" hx-target="#cards-{{ lst.id }}" hx-swap="beforeend">
+                    <input type="text" name="title" placeholder="Card title..." required>
+                    <button type="submit" class="btn-add">+</button>
+                  </form>
+                </div>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="list" style="min-width:280px;background:transparent;box-shadow:none">
+                <div class="empty-state">
+                  <p>No lists yet. Create one below.</p>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="board-footer">
+            <form class="board-form" hx-post="/boards/{{ board.id }}/lists" hx-target="#boards" hx-swap="outerHTML">
+              <input type="text" name="name" placeholder="New list name" required>
+              <button type="submit" class="btn-add">+ New List</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+
+        <div class="board-section" style="opacity:0.6">
+          <div class="board-footer">
+            <form class="board-form" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
+              <input type="text" name="name" placeholder="New board name" required>
+              <button type="submit" class="btn-add">+ New Board</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+      <div class="empty-state">
+        <h2>Welcome to Kanban!</h2>
+        <p>No boards yet. Create your first board to get started.</p>
+        <form class="board-form" style="max-width:360px;margin:0 auto" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
+          <input type="text" name="name" placeholder="Board name" required>
+          <button type="submit" class="btn-add">Create Board</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="modal"></div>
+</body>
+</html>
