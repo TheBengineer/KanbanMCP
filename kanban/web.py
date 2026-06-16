@@ -55,8 +55,7 @@ def _card_html(card) -> str:
         total = len(card.subtasks)
         progress = f'<div class="subtask-progress">{done}/{total} done</div>'
 
-    subs = "".join(_subtask_row(s, f"subtasks-{card.id}") for s in card.subtasks)
-    more = ""
+    subs = "".join(_subtask_row(s, f"subtask-list-{card.id}") for s in card.subtasks)
 
     desc = ""
     if card.description:
@@ -67,16 +66,19 @@ def _card_html(card) -> str:
 
     return f"""<div class="card" id="card-{card.id}" data-card-id="{card.id}">
   <div class="card-title">{card.title}</div>
-  <div id="subtasks-{card.id}" class="subtask-list">
-    {progress}{subs}{more}
+  <div id="subtasks-{card.id}">
+    {progress}
+    <div id="subtask-list-{card.id}" class="subtask-list">
+      {subs}
+    </div>
+    <form hx-post="/cards/{card.id}/subtasks"
+          hx-target="#subtask-list-{card.id}"
+          hx-swap="innerHTML"
+          class="board-form" style="margin-top:4px">
+      <input type="text" name="name" placeholder="Add task..." required>
+      <button type="submit" class="btn-add">+</button>
+    </form>
   </div>
-  <form hx-post="/cards/{card.id}/subtasks"
-        hx-target="#subtasks-{card.id}"
-        hx-swap="innerHTML"
-        class="board-form" style="margin-top:4px">
-    <input type="text" name="name" placeholder="Add task..." required>
-    <button type="submit" class="btn-add">+</button>
-  </form>
   {desc}
   <div class="card-actions">
     <button hx-get="/cards/{card.id}" hx-target="#modal" class="btn-add">Edit</button>
@@ -89,11 +91,7 @@ def _card_html(card) -> str:
 
 
 def _subtask_list_html(card_id: int, subtasks: list) -> str:
-    done = sum(1 for s in subtasks if s.is_completed)
-    total = len(subtasks)
-    progress = f'<div class="subtask-progress">{done}/{total} done</div>' if subtasks else ""
-    items = "".join(_subtask_row(s, f"subtasks-list-{card_id}") for s in subtasks)
-    return f'<div id="subtasks-list-{card_id}" class="subtask-list">{progress}{items}</div>'
+    return "".join(_subtask_row(s, f"subtasks-list-{card_id}") for s in subtasks)
 
 
 def _subtask_row(sub, container_id: str) -> str:
@@ -220,9 +218,11 @@ async def get_card_modal(card_id: int):
 
     <label>Subtasks</label>
     <div id="subtasks-container-{card.id}">
-      {subs}
+      <div id="subtasks-list-{card.id}" class="subtask-list">
+        {subs}
+      </div>
       <form hx-post="/cards/{card.id}/subtasks"
-            hx-target="#subtasks-container-{card.id}"
+            hx-target="#subtasks-list-{card.id}"
             hx-swap="innerHTML"
             class="board-form" style="margin-top:8px">
         <input type="text" name="name" placeholder="Add subtask..." required>

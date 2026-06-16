@@ -55,36 +55,36 @@
                   <div class="card" id="card-{{ card.id }}" data-card-id="{{ card.id }}">
                     <div class="card-title">{{ card.title }}</div>
 
-                    <div id="subtasks-{{ card.id }}" class="subtask-list">
+                    <div id="subtasks-{{ card.id }}">
                       {% if card.subtasks %}
                       {% set done = card.subtasks | selectattr('is_completed') | list | length %}
                       {% set total = card.subtasks | length %}
                       <div class="subtask-progress">{{ done }}/{{ total }} done</div>
                       {% endif %}
-                      {% for sub in card.subtasks %}
-                      <label class="subtask-item" id="subtask-{{ sub.id }}">
-                        <input type="checkbox" class="subtask-checkbox"
-                               hx-patch="/subtasks/{{ sub.id }}/toggle"
-                               hx-target="#subtasks-{{ card.id }}"
-                               hx-swap="innerHTML"
-                               {{ 'checked' if sub.is_completed else '' }}>
-                        <span>{{ sub.name }}</span>
-                        <button hx-delete="/subtasks/{{ sub.id }}"
-                                hx-target="#subtask-{{ sub.id }}"
-                                hx-swap="delete"
-                                class="btn-danger">×</button>
-                      </label>
-                      {% endfor %}
-
+                      <div id="subtask-list-{{ card.id }}" class="subtask-list">
+                        {% for sub in card.subtasks %}
+                        <label class="subtask-item" id="subtask-{{ sub.id }}">
+                          <input type="checkbox" class="subtask-checkbox"
+                                 hx-patch="/subtasks/{{ sub.id }}/toggle"
+                                 hx-target="#subtask-list-{{ card.id }}"
+                                 hx-swap="innerHTML"
+                                 {{ 'checked' if sub.is_completed else '' }}>
+                          <span>{{ sub.name }}</span>
+                          <button hx-delete="/subtasks/{{ sub.id }}"
+                                  hx-target="#subtask-{{ sub.id }}"
+                                  hx-swap="delete"
+                                  class="btn-danger">×</button>
+                        </label>
+                        {% endfor %}
+                      </div>
+                      <form hx-post="/cards/{{ card.id }}/subtasks"
+                            hx-target="#subtask-list-{{ card.id }}"
+                            hx-swap="innerHTML"
+                            class="board-form" style="margin-top:4px">
+                        <input type="text" name="name" placeholder="Add task..." required>
+                        <button type="submit" class="btn-add">+</button>
+                      </form>
                     </div>
-
-                    <form hx-post="/cards/{{ card.id }}/subtasks"
-                          hx-target="#subtasks-{{ card.id }}"
-                          hx-swap="innerHTML"
-                          class="board-form" style="margin-top:4px">
-                      <input type="text" name="name" placeholder="Add task..." required>
-                      <button type="submit" class="btn-add">+</button>
-                    </form>
 
                     {% if card.description %}
                     <div class="notes-preview">
