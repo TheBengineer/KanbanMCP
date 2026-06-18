@@ -3,7 +3,7 @@ import os
 
 from kanban.models import Board, Card, List, Subtask
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "kanban.db")
+DB_PATH = os.environ.get("KANBAN_DB_PATH") or os.path.join(os.path.dirname(__file__), "kanban.db")
 
 
 def get_conn() -> sqlite3.Connection:

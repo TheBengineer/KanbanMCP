@@ -9,7 +9,8 @@ User=kanban
 Group=kanban
 WorkingDirectory=/opt/kanban
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/kanban/venv/bin/python /opt/kanban/kanban.py
+ExecStart=/opt/kanban/venv/bin/python -m uvicorn kanban.web:app --host 0.0.0.0 --port 8080
+WorkingDirectory=/opt/kanban
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
