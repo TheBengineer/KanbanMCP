@@ -534,3 +534,74 @@ def test_create_and_get_board_with_created_at(tmp_db_path):
     board = kanban_db.create_board("Timestamp Test")
     assert board.created_at != ""
     assert "T" in board.created_at or " " in board.created_at  # ISO format or similar
+
+
+class TestCardStatusPriority:
+    def test_card_default_status_and_priority(self, tmp_db_path):
+        """Created card gets default status='pending', priority='medium'."""
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Test")
+        assert card.status == "pending"
+        assert card.priority == "medium"
+
+    def test_card_custom_status_and_priority(self, tmp_db_path):
+        """Created card stores explicitly provided status and priority."""
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Task", status="in_progress", priority="high")
+        assert card.status == "in_progress"
+        assert card.priority == "high"
+
+    def test_update_card_preserves_status_when_omitted(self, tmp_db_path):
+        """Partial update without status/priority leaves them unchanged."""
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Task", status="in_progress", priority="high")
+        updated = kanban_db.update_card(card.id, title="New Title")
+        assert updated is not None
+        assert updated.title == "New Title"
+        assert updated.status == "in_progress"   # preserved
+        assert updated.priority == "high"         # preserved
+
+    def test_update_card_changes_status(self, tmp_db_path):
+        """Updating status changes it, other fields unchanged."""
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Task", status="pending")
+        updated = kanban_db.update_card(card.id, status="completed")
+        assert updated is not None
+        assert updated.status == "completed"
+        assert updated.priority == "medium"  # unchanged default
+
+    def test_update_card_changes_priority(self, tmp_db_path):
+        """Updating priority changes it, status unchanged."""
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Task", priority="low")
+        updated = kanban_db.update_card(card.id, priority="high")
+        assert updated is not None
+        assert updated.priority == "high"
+        assert updated.status == "pending"  # unchanged default
+
+    def test_card_status_and_priority_in_get_boards(self, tmp_db_path):
+        """get_boards returns cards with correct status/priority."""
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Task", status="completed", priority="low")
+        boards = kanban_db.get_boards()
+        fetched = boards[0].lists[0].cards[0]
+        assert fetched.status == "completed"
+        assert fetched.priority == "low"

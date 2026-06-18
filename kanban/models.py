@@ -18,6 +18,8 @@ class Card(BaseModel):
     position: int = 0
     created_at: str = ""
     subtasks: list[Subtask] = []
+    status: str = "pending"
+    priority: str = "medium"
 
 
 class List(BaseModel):
@@ -53,6 +55,8 @@ class CreateCard(BaseModel):
 class UpdateCard(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
 
 
 class MoveCard(BaseModel):

@@ -50,6 +50,15 @@ def init_db() -> None:
                 position INTEGER NOT NULL DEFAULT 0
             );
         """)
+
+        # Migrate existing databases: add status and priority columns if missing
+        cursor = conn.execute("PRAGMA table_info(cards)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+        if "status" not in existing_cols:
+            conn.execute("ALTER TABLE cards ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'")
+        if "priority" not in existing_cols:
+            conn.execute("ALTER TABLE cards ADD COLUMN priority TEXT NOT NULL DEFAULT 'medium'")
+
         conn.commit()
     finally:
         conn.close()
@@ -93,6 +102,8 @@ def get_boards() -> list[Board]:
                         description=cr["description"],
                         position=cr["position"],
                         created_at=cr["created_at"],
+                        status=cr["status"],
+                        priority=cr["priority"],
                     )
 
                     subtask_rows = conn.execute(
@@ -178,6 +189,8 @@ def _fetch_card(conn: sqlite3.Connection, card_id: int) -> Card | None:
         description=row["description"],
         position=row["position"],
         created_at=row["created_at"],
+        status=row["status"],
+        priority=row["priority"],
     )
     subtask_rows = conn.execute(
         "SELECT * FROM subtasks WHERE card_id = ? ORDER BY position, id",
@@ -283,14 +296,14 @@ def delete_list(list_id: int) -> None:
         conn.close()
 
 
-def create_card(list_id: int, title: str, description: str = "") -> Card:
+def create_card(list_id: int, title: str, description: str = "", status: str = "pending", priority: str = "medium") -> Card:
     """INSERT card with auto-position."""
     conn = get_conn()
     try:
         pos = _next_position(conn, "cards", "list_id", list_id)
         cur = conn.execute(
-            "INSERT INTO cards (list_id, title, description, position) VALUES (?, ?, ?, ?)",
-            (list_id, title, description, pos),
+            "INSERT INTO cards (list_id, title, description, position, status, priority) VALUES (?, ?, ?, ?, ?, ?)",
+            (list_id, title, description, pos, status, priority),
         )
         card_id = cur.lastrowid
         conn.commit()
@@ -299,7 +312,7 @@ def create_card(list_id: int, title: str, description: str = "") -> Card:
         conn.close()
 
 
-def update_card(card_id: int, title: str | None = None, description: str | None = None) -> Card | None:
+def update_card(card_id: int, title: str | None = None, description: str | None = None, status: str | None = None, priority: str | None = None) -> Card | None:
     """Partial update — only set non-None fields."""
     conn = get_conn()
     try:
@@ -308,6 +321,10 @@ def update_card(card_id: int, title: str | None = None, description: str | None 
             updates["title"] = title
         if description is not None:
             updates["description"] = description
+        if status is not None:
+            updates["status"] = status
+        if priority is not None:
+            updates["priority"] = priority
         if not updates:
             return _fetch_card(conn, card_id)
         set_clause = ", ".join(f"{k} = ?" for k in updates)
