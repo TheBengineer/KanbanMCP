@@ -79,6 +79,18 @@ class MCPServer:
                         "list_id": {"type": "integer"},
                         "title": {"type": "string"},
                         "description": {"type": "string", "description": "Notes"},
+                        "status": {
+                            "type": "string",
+                            "description": "Card status (pending, in_progress, completed, cancelled)",
+                            "default": "pending",
+                            "enum": ["pending", "in_progress", "completed", "cancelled"],
+                        },
+                        "priority": {
+                            "type": "string",
+                            "description": "Card priority (low, medium, high)",
+                            "default": "medium",
+                            "enum": ["low", "medium", "high"],
+                        },
                     },
                     "required": ["list_id", "title"],
                 },
@@ -92,6 +104,8 @@ class MCPServer:
                         "card_id": {"type": "integer"},
                         "title": {"type": "string"},
                         "description": {"type": "string"},
+                        "status": {"type": "string", "description": "Card status (pending, in_progress, completed, cancelled)"},
+                        "priority": {"type": "string", "description": "Card priority (low, medium, high)"},
                     },
                     "required": ["card_id"],
                 },
@@ -232,13 +246,18 @@ class MCPServer:
             return {"ok": True}
         elif name == "kanban_create_card":
             return db.create_card(
-                args["list_id"], args["title"], args.get("description", "")
+                args["list_id"], args["title"],
+                args.get("description", ""),
+                status=args.get("status", "pending"),
+                priority=args.get("priority", "medium"),
             ).model_dump()
         elif name == "kanban_update_card":
             result = db.update_card(
                 args["card_id"],
                 title=args.get("title"),
                 description=args.get("description"),
+                status=args.get("status"),
+                priority=args.get("priority"),
             )
             if result is None:
                 raise ValueError(f"Card {args['card_id']} not found")

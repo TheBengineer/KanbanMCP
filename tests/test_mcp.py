@@ -398,6 +398,69 @@ class TestCardTools:
         })
         assert "result" in resp
 
+    def test_create_card_with_status_and_priority(self, mcp_server):
+        """Create card with explicit status and priority."""
+        proc, _ = mcp_server
+        _send(proc, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+        proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
+        proc.stdin.flush()
+
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "kanban_create_board", "arguments": {"name": "B"}},
+        })
+        board = json.loads(resp["result"]["content"][0]["text"])
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+            "params": {"name": "kanban_create_list", "arguments": {"board_id": board["id"], "name": "L"}},
+        })
+        lst = json.loads(resp["result"]["content"][0]["text"])
+
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+            "params": {"name": "kanban_create_card", "arguments": {
+                "list_id": lst["id"], "title": "Card", "status": "in_progress", "priority": "high"
+            }},
+        })
+        assert resp["jsonrpc"] == "2.0"
+        content = json.loads(resp["result"]["content"][0]["text"])
+        assert content["status"] == "in_progress"
+        assert content["priority"] == "high"
+
+    def test_update_card_with_status_and_priority(self, mcp_server):
+        """Update card with explicit status and priority."""
+        proc, _ = mcp_server
+        _send(proc, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+        proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
+        proc.stdin.flush()
+
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "kanban_create_board", "arguments": {"name": "B"}},
+        })
+        board = json.loads(resp["result"]["content"][0]["text"])
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+            "params": {"name": "kanban_create_list", "arguments": {"board_id": board["id"], "name": "L"}},
+        })
+        lst = json.loads(resp["result"]["content"][0]["text"])
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+            "params": {"name": "kanban_create_card", "arguments": {"list_id": lst["id"], "title": "Old"}},
+        })
+        card = json.loads(resp["result"]["content"][0]["text"])
+
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 5, "method": "tools/call",
+            "params": {"name": "kanban_update_card", "arguments": {
+                "card_id": card["id"], "title": "New", "status": "completed", "priority": "low"
+            }},
+        })
+        assert "result" in resp
+        content = json.loads(resp["result"]["content"][0]["text"])
+        assert content["status"] == "completed"
+        assert content["priority"] == "low"
+
 
 class TestSubtaskTools:
     def test_create_toggle_delete_subtask(self, mcp_server):
