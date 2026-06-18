@@ -101,10 +101,11 @@ document.addEventListener("click", function (evt) {
     updateProgress(target);
   });
 
-  // After any card move completes, trigger a board-wide refresh
+  // After any card or list move completes, trigger a board-wide refresh
   document.body.addEventListener("htmx:afterRequest", function (evt) {
     var pathInfo = evt.detail.pathInfo;
-    if (pathInfo && pathInfo.requestPath && pathInfo.requestPath.indexOf("/cards/") !== -1 && pathInfo.requestPath.indexOf("/move") !== -1) {
+    if (!pathInfo || !pathInfo.requestPath) return;
+    if (pathInfo.requestPath.indexOf("/move") !== -1) {
       htmx.trigger("body", "boardRefresh");
     }
   });
