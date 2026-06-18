@@ -117,6 +117,11 @@
                     </div>
                     {% endif %}
 
+                    <div class="flex items-center gap-2 mt-1 mb-1">
+                      <span class="inline-block w-2 h-2 rounded-full {% if card.priority == 'high' %}bg-red-500{% elif card.priority == 'medium' %}bg-yellow-500{% else %}bg-gray-400{% endif %} mr-1" title="{{ card.priority }} priority"></span>
+                      <span class="text-xs text-muted">{{ card.status.replace('_', ' ').title() }}</span>
+                    </div>
+
                     <div class="card-actions flex gap-2 mt-2 pt-2 border-t border-border">
                       <button hx-get="/cards/{{ card.id }}" hx-target="#modal" class="btn-add">Edit</button>
                       <button hx-delete="/cards/{{ card.id }}"

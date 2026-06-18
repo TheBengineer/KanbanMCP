@@ -93,6 +93,10 @@ def _card_html(card) -> str:
     </form>
   </div>
   {desc}
+  <div class="flex items-center gap-2 mt-1 mb-1">
+    <span class="inline-block w-2 h-2 rounded-full {'bg-red-500' if card.priority == 'high' else 'bg-yellow-500' if card.priority == 'medium' else 'bg-gray-400'} mr-1" title="{card.priority} priority"></span>
+    <span class="text-xs text-muted">{card.status.replace('_', ' ').title()}</span>
+  </div>
   <div class="card-actions flex gap-2 mt-2 pt-2 border-t border-border">
     <button hx-get="/cards/{card.id}" hx-target="#modal" class="btn-add">Edit</button>
     <button hx-delete="/cards/{card.id}"
@@ -236,8 +240,10 @@ async def delete_list_route(list_id: int):
 
 
 @app.post("/lists/{list_id}/cards", response_class=HTMLResponse)
-async def create_card_route(list_id: int, title: str = Form(...), description: str = Form("")):
-    card = create_card(list_id, title, description)
+async def create_card_route(list_id: int, title: str = Form(...),
+    description: str = Form(""), status: str = Form("pending"),
+    priority: str = Form("medium")):
+    card = create_card(list_id, title, description, status=status, priority=priority)
     return _card_html(card)
 
 
@@ -264,6 +270,21 @@ async def get_card_modal(card_id: int):
 
       <label class="block text-sm text-muted mb-1">Description</label>
       <textarea name="description" class="w-full px-3 py-2 rounded bg-[#0f0f1a] border border-border text-white text-sm mb-4">{card.description}</textarea>
+
+      <label class="block text-sm text-muted mb-1">Status</label>
+      <select name="status" class="w-full px-3 py-2 rounded bg-[#0f0f1a] border border-border text-white text-sm mb-3">
+        <option value="pending" {"selected" if card.status == "pending" else ""}>Pending</option>
+        <option value="in_progress" {"selected" if card.status == "in_progress" else ""}>In Progress</option>
+        <option value="completed" {"selected" if card.status == "completed" else ""}>Completed</option>
+        <option value="cancelled" {"selected" if card.status == "cancelled" else ""}>Cancelled</option>
+      </select>
+
+      <label class="block text-sm text-muted mb-1">Priority</label>
+      <select name="priority" class="w-full px-3 py-2 rounded bg-[#0f0f1a] border border-border text-white text-sm mb-3">
+        <option value="low" {"selected" if card.priority == "low" else ""}>Low</option>
+        <option value="medium" {"selected" if card.priority == "medium" else ""}>Medium</option>
+        <option value="high" {"selected" if card.priority == "high" else ""}>High</option>
+      </select>
 
       <div class="modal-actions flex gap-2 justify-end">
         <button type="submit" class="btn-add px-4 py-2 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">Save</button>
@@ -293,10 +314,12 @@ async def get_card_modal(card_id: int):
 @app.patch("/cards/{card_id}", response_class=HTMLResponse)
 async def update_card_route(
     card_id: int,
-    title: str = Form(...),
-    description: str = Form(""),
+    title: str | None = Form(None),
+    description: str | None = Form(None),
+    status: str | None = Form(None),
+    priority: str | None = Form(None),
 ):
-    updated = update_card(card_id, title=title, description=description)
+    updated = update_card(card_id, title=title, description=description, status=status, priority=priority)
     if updated is None:
         raise HTTPException(status_code=404, detail="Card not found")
     return HTMLResponse(

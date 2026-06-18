@@ -118,6 +118,43 @@ class TestCardRoutes:
         assert updated.title == "Updated"
         assert updated.description == "Updated desc"
 
+    def test_create_card_has_default_status_priority(self, tclient):
+        """POST create card returns card with default status/pending, priority/medium."""
+        board = db.create_board("Board")
+        lst = db.create_list(board.id, "List")
+        resp = tclient.post(f"/lists/{lst.id}/cards", data={"title": "Task"})
+        assert resp.status_code == 200
+        assert "Pending" in resp.text
+        assert "medium" in resp.text
+
+    def test_update_card_with_status_priority(self, tclient):
+        """PATCH update card with status and priority changes them."""
+        board = db.create_board("B")
+        lst = db.create_list(board.id, "L")
+        card = db.create_card(lst.id, "Original")
+        resp = tclient.patch(
+            f"/cards/{card.id}",
+            data={"title": "Updated", "status": "in_progress", "priority": "high"},
+        )
+        assert resp.status_code == 200
+        assert "In Progress" in resp.text
+        assert "high" in resp.text
+
+    def test_update_card_without_status_preserves_default(self, tclient):
+        """PATCH without status/priority leaves defaults unchanged."""
+        board = db.create_board("B")
+        lst = db.create_list(board.id, "L")
+        card = db.create_card(lst.id, "Card")
+        resp = tclient.patch(
+            f"/cards/{card.id}",
+            data={"title": "New"},
+        )
+        assert resp.status_code == 200
+        boards = db.get_boards()
+        updated = boards[0].lists[0].cards[0]
+        assert updated.status == "pending"
+        assert updated.priority == "medium"
+
 
 class TestSubtaskRoutes:
     def test_create_subtask(self, tclient):
