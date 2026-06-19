@@ -110,6 +110,22 @@
                         <button type="submit" class="btn-add">+</button>
                       </form>
                     </div>
+                    <div id="chat-{{ card.id }}" class="mt-2">
+                      <a href="#"
+                         class="text-xs text-muted hover:text-white"
+                         hx-get="/cards/{{ card.id }}/messages"
+                         hx-target="#chat-list-{{ card.id }}"
+                         hx-swap="innerHTML">Chat (0)</a>
+                      <div id="chat-list-{{ card.id }}" class="chat-log max-h-40 overflow-y-auto mt-1"></div>
+                      <form hx-post="/cards/{{ card.id }}/messages"
+                            hx-target="#chat-list-{{ card.id }}"
+                            hx-swap="innerHTML"
+                            class="flex gap-1 mt-1">
+                        <input type="text" name="author" placeholder="Name" class="w-16 px-1 py-0.5 rounded bg-[#0f0f1a] border border-border text-white text-xs">
+                        <input type="text" name="body" placeholder="Message..." class="flex-1 px-1 py-0.5 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
+                        <button type="submit" class="btn-add px-2 py-0.5 rounded bg-accent text-white text-xs">Send</button>
+                      </form>
+                    </div>
 
                     {% if card.description %}
                     <div class="notes-preview">
