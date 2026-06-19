@@ -34,9 +34,9 @@
       </div>
     </header>
 
-    <div id="boards">
+    <div id="board-content">
       <div class="px-6 py-3 flex gap-2 items-center">
-        <form class="board-form flex gap-2" hx-post="/boards/{{ board.id }}/lists" hx-target="#boards" hx-swap="outerHTML">
+        <form class="board-form flex gap-2" hx-post="/board/{{ board.id }}/lists" hx-target="#board-content" hx-swap="outerHTML">
           <input type="text" name="name" placeholder="New list name" class="px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
           <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New List</button>
         </form>
@@ -48,17 +48,15 @@
       </div>
 
       {% if board.lists %}
-      <div class="flex gap-4 px-6 pb-6 overflow-x-auto" style="align-items: flex-start;">
+      <div class="flex gap-4 overflow-x-auto" style="align-items: flex-start;">
         {% for lst in board.lists %}
         <div class="list bg-cardbg rounded-lg p-3 min-w-[260px] max-w-[260px] border border-border" id="list-{{ lst.id }}">
           <div class="list-header flex items-center justify-between mb-2">
             <h2 class="font-semibold text-white text-sm">{{ lst.name }}</h2>
-            <button
-              hx-delete="/lists/{{ lst.id }}"
-              hx-target="#list-{{ lst.id }}"
-              hx-swap="delete"
-              class="btn-danger"
-            >×</button>
+            <button hx-post="/board/{{ board.id }}/list/{{ lst.id }}/delete"
+                    hx-target="#board-content"
+                    hx-swap="outerHTML"
+                    class="btn-danger">×</button>
           </div>
 
           <div class="cards" id="cards-{{ lst.id }}" data-list-id="{{ lst.id }}">

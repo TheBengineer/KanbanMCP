@@ -266,6 +266,24 @@ async def create_list_route(board_id: int, name: str = Form(...)):
     return _render_boards_html(boards)
 
 
+@app.post("/board/{board_id}/lists", response_class=HTMLResponse)
+async def create_list_on_board(board_id: int, name: str = Form(...)):
+    create_list(board_id, name)
+    board = get_board(board_id)
+    if board is None:
+        raise HTTPException(status_code=404, detail="Board not found")
+    return _render_board_section_html(board)
+
+
+@app.post("/board/{board_id}/list/{list_id}/delete", response_class=HTMLResponse)
+async def delete_list_on_board(board_id: int, list_id: int):
+    delete_list(list_id)
+    board = get_board(board_id)
+    if board is None:
+        raise HTTPException(status_code=404, detail="Board not found")
+    return _render_board_section_html(board)
+
+
 @app.patch("/lists/{list_id}", response_class=HTMLResponse)
 async def update_list_route(list_id: int, name: str = Form(...)):
     updated = update_list(list_id, name)
@@ -476,6 +494,52 @@ async def create_card_message(card_id: int, author: str = Form(""), body: str = 
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────
+
+
+def _render_board_section_html(board) -> str:
+    """Render a single board's content area for HTMX swap on board page."""
+    lists_html = ""
+    for lst in board.lists:
+        cards_html = "".join(_card_html(c) for c in lst.cards)
+        lists_html += f"""<div class="list bg-cardbg rounded-lg p-3 min-w-[260px] max-w-[260px] border border-border" id="list-{lst.id}">
+  <div class="list-header flex items-center justify-between mb-2">
+    <h2 class="font-semibold text-white text-sm">{lst.name}</h2>
+    <button hx-post="/board/{board.id}/list/{lst.id}/delete"
+            hx-target="#board-content"
+            hx-swap="outerHTML"
+            class="btn-danger">×</button>
+  </div>
+  <div class="cards" id="cards-{lst.id}" data-list-id="{lst.id}">
+    {cards_html}
+  </div>
+  <div class="list-footer p-1">
+    <form class="board-form flex gap-1" hx-post="/lists/{lst.id}/cards" hx-target="#cards-{lst.id}" hx-swap="beforeend" hx-on::after-request="this.reset()">
+      <input type="text" name="title" placeholder="Card title..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
+      <button type="submit" class="btn-add px-2 py-1 rounded bg-accent text-white text-xs">+</button>
+    </form>
+  </div>
+</div>"""
+
+    lists_area = f"""<div class="flex gap-4 overflow-x-auto" style="align-items: flex-start;">
+    {lists_html}
+  </div>""" if lists_html else """<div class="empty-state text-center py-16">
+    <p class="text-muted">No lists yet. Create one above.</p>
+  </div>"""
+
+    return f"""<div id="board-content">
+  <div class="px-6 py-3 flex gap-2 items-center">
+    <form class="board-form flex gap-2" hx-post="/board/{board.id}/lists" hx-target="#board-content" hx-swap="outerHTML">
+      <input type="text" name="name" placeholder="New list name" class="px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
+      <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New List</button>
+    </form>
+    <button hx-delete="/boards/{board.id}"
+            hx-target="body"
+            hx-swap="innerHTML"
+            class="btn-danger text-sm px-3 py-1.5 rounded"
+            onclick="return confirm('Delete this board and all its lists and cards?')">Delete Board</button>
+  </div>
+  {lists_area}
+</div>"""
 
 
 def _render_boards_html(boards) -> str:
