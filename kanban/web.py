@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, StreamingResponse
 from jinja2 import Environment, FileSystemLoader
 import os
+import sqlite3
 import asyncio
 import subprocess
 from typing import AsyncGenerator
@@ -34,6 +35,8 @@ from kanban.db import (
     toggle_subtask,
     delete_subtask,
     move_subtask,
+    create_chat_message,
+    get_chat_messages,
     init_db,
 )
 from kanban.mcp_server import MCPServer
@@ -70,6 +73,7 @@ def _card_html(card) -> str:
 
     subs = "".join(_subtask_row(s, f"subtask-list-{card.id}") for s in card.subtasks)
 
+    chat_count = len(get_chat_messages(card.id))
     desc = ""
     if card.description:
         preview = card.description[:80]
@@ -91,6 +95,22 @@ def _card_html(card) -> str:
     <input type="text" name="name" placeholder="Add task..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
     <button type="submit" class="btn-add px-2 py-1 rounded bg-accent text-white text-xs">+</button>
     </form>
+    <div id="chat-{card.id}" class="mt-2">
+      <a href="#"
+         class="text-xs text-muted hover:text-white"
+         hx-get="/cards/{card.id}/messages"
+         hx-target="#chat-list-{card.id}"
+         hx-swap="innerHTML">Chat ({chat_count})</a>
+      <div id="chat-list-{card.id}" class="chat-log max-h-40 overflow-y-auto mt-1"></div>
+      <form hx-post="/cards/{card.id}/messages"
+            hx-target="#chat-list-{card.id}"
+            hx-swap="innerHTML"
+            class="flex gap-1 mt-1">
+        <input type="text" name="author" placeholder="Name" class="w-16 px-1 py-0.5 rounded bg-[#0f0f1a] border border-border text-white text-xs">
+        <input type="text" name="body" placeholder="Message..." class="flex-1 px-1 py-0.5 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
+        <button type="submit" class="btn-add px-2 py-0.5 rounded bg-accent text-white text-xs">Send</button>
+      </form>
+    </div>
   </div>
   {desc}
   <div class="flex items-center gap-2 mt-1 mb-1">
@@ -126,6 +146,20 @@ def _subtask_row(sub, container_id: str) -> str:
               hx-swap="delete"
               class="btn-danger">×</button>
     </label>'''
+
+
+def _chat_message_row(msg) -> str:
+    """Render a single chat message for HTMX swap."""
+    return f'''<div class="chat-message text-xs text-white py-1 border-b border-border last:border-0" id="chat-msg-{msg.id}">
+  <span class="text-muted">{msg.created_at}</span>
+  <span class="font-medium ml-1">{msg.author}</span>
+  <span class="ml-1">{msg.body}</span>
+</div>'''
+
+
+def _chat_list_html(card_id: int) -> str:
+    messages = get_chat_messages(card_id)
+    return "".join(_chat_message_row(m) for m in messages)
 
 
 # ── MCP HTTP Endpoint ────────────────────────────────────────────────────
@@ -404,6 +438,23 @@ async def delete_subtask_route(subtask_id: int):
                 if c.id == card_id:
                     return _subtask_list_html(card_id, c.subtasks)
     return _subtask_list_html(card_id, [])
+
+
+# ── Chat Message Routes ─────────────────────────────────────────────────────
+
+
+@app.get("/cards/{card_id}/messages", response_class=HTMLResponse)
+async def get_card_messages(card_id: int):
+    return _chat_list_html(card_id)
+
+
+@app.post("/cards/{card_id}/messages", response_class=HTMLResponse)
+async def create_card_message(card_id: int, author: str = Form(""), body: str = Form(...)):
+    try:
+        create_chat_message(card_id, author, body)
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=404, detail="Card not found")
+    return _chat_list_html(card_id)
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────
