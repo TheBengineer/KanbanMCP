@@ -604,3 +604,67 @@ class TestCardStatusPriority:
         fetched = boards[0].lists[0].cards[0]
         assert fetched.status == "completed"
         assert fetched.priority == "low"
+
+
+class TestChatMessages:
+    def test_create_chat_message(self, tmp_db_path):
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Card")
+        msg = kanban_db.create_chat_message(card.id, "Alice", "Hello")
+        assert msg.id > 0
+        assert msg.card_id == card.id
+        assert msg.author == "Alice"
+        assert msg.body == "Hello"
+        assert msg.created_at != ""
+
+    def test_get_chat_messages_for_card(self, tmp_db_path):
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Card")
+        kanban_db.create_chat_message(card.id, "Alice", "First")
+        kanban_db.create_chat_message(card.id, "Bob", "Second")
+        msgs = kanban_db.get_chat_messages(card.id)
+        assert len(msgs) == 2
+        assert msgs[0].body == "First"
+        assert msgs[1].body == "Second"
+
+    def test_cascade_message_deleted_with_card(self, tmp_db_path):
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Card")
+        kanban_db.create_chat_message(card.id, "Alice", "Hello")
+        kanban_db.delete_card(card.id)
+        assert kanban_db.get_chat_messages(card.id) == []
+
+    def test_get_chat_messages_empty(self, tmp_db_path):
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Card")
+        assert kanban_db.get_chat_messages(card.id) == []
+
+    def test_create_chat_message_empty_body(self, tmp_db_path):
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Card")
+        msg = kanban_db.create_chat_message(card.id, "Alice", "")
+        assert msg.body == ""
+
+    def test_create_chat_message_default_author(self, tmp_db_path):
+        kanban_db.DB_PATH = tmp_db_path
+        kanban_db.init_db()
+        board = kanban_db.create_board("Board")
+        lst = kanban_db.create_list(board.id, "List")
+        card = kanban_db.create_card(lst.id, "Card")
+        msg = kanban_db.create_chat_message(card.id, body="Hello")
+        assert msg.author == ""
