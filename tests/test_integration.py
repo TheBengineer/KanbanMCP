@@ -123,13 +123,27 @@ class TestWebRender:
     """Verify HTML rendering correctness."""
 
     def test_boards_page_shows_lists_and_cards(self, tclient):
-        """Board page with data renders lists and cards."""
+        """Dashboard shows board names and links to board view."""
         board = kanban_db.create_board("My Board")
         lst = kanban_db.create_list(board.id, "Todo")
         kanban_db.create_card(lst.id, "Card 1")
         kanban_db.create_card(lst.id, "Card 2")
 
         resp = tclient.get("/")
+        assert resp.status_code == 200
+        assert "My Board" in resp.text
+        assert "/board/" + str(board.id) in resp.text
+        assert "2 cards" in resp.text
+        assert "1 list" in resp.text
+
+    def test_board_page_shows_lists_and_cards(self, tclient):
+        """Board detail page renders lists and cards."""
+        board = kanban_db.create_board("My Board")
+        lst = kanban_db.create_list(board.id, "Todo")
+        kanban_db.create_card(lst.id, "Card 1")
+        kanban_db.create_card(lst.id, "Card 2")
+
+        resp = tclient.get(f"/board/{board.id}")
         assert resp.status_code == 200
         assert "My Board" in resp.text
         assert "Todo" in resp.text

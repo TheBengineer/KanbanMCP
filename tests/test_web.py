@@ -299,7 +299,7 @@ class TestChatMessages:
         board = db.create_board("Board")
         lst = db.create_list(board.id, "List")
         card = db.create_card(lst.id, "Card")
-        resp = tclient.get("/")
+        resp = tclient.get(f"/board/{board.id}")
         assert resp.status_code == 200
         assert "Chat (0)" in resp.text
 

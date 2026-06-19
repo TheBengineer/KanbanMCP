@@ -173,17 +173,93 @@ def _rebalance(table: str, parent_col: str, parent_id: int, conn: sqlite3.Connec
             conn.close()
 
 
+def get_board(board_id: int) -> Board | None:
+    """Fetch a single board by id with all nested lists, cards, subtasks."""
+    conn = get_conn()
+    try:
+        row = conn.execute("SELECT * FROM boards WHERE id = ?", (board_id,)).fetchone()
+        if row is None:
+            return None
+        board = Board(id=row["id"], name=row["name"], created_at=row["created_at"])
+
+        list_rows = conn.execute(
+            "SELECT * FROM lists WHERE board_id = ? ORDER BY position, id",
+            (board_id,),
+        ).fetchall()
+
+        for lr in list_rows:
+            lst = List(
+                id=lr["id"],
+                board_id=lr["board_id"],
+                name=lr["name"],
+                position=lr["position"],
+            )
+
+            card_rows = conn.execute(
+                "SELECT * FROM cards WHERE list_id = ? ORDER BY position, id",
+                (lr["id"],),
+            ).fetchall()
+
+            for cr in card_rows:
+                card = Card(
+                    id=cr["id"],
+                    list_id=cr["list_id"],
+                    title=cr["title"],
+                    description=cr["description"],
+                    position=cr["position"],
+                    created_at=cr["created_at"],
+                    status=cr["status"],
+                    priority=cr["priority"],
+                )
+
+                subtask_rows = conn.execute(
+                    "SELECT * FROM subtasks WHERE card_id = ? ORDER BY position, id",
+                    (cr["id"],),
+                ).fetchall()
+
+                for sr in subtask_rows:
+                    card.subtasks.append(
+                        Subtask(
+                            id=sr["id"],
+                            card_id=sr["card_id"],
+                            name=sr["name"],
+                            is_completed=bool(sr["is_completed"]),
+                            position=sr["position"],
+                        )
+                    )
+
+                lst.cards.append(card)
+
+            board.lists.append(lst)
+
+        return board
+    finally:
+        conn.close()
+
+
+def get_dashboard_stats() -> dict:
+    """Return summary stats for the dashboard."""
+    conn = get_conn()
+    try:
+        board_count = conn.execute("SELECT COUNT(*) FROM boards").fetchone()[0]
+        list_count = conn.execute("SELECT COUNT(*) FROM lists").fetchone()[0]
+        card_count = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+        subtask_count = conn.execute("SELECT COUNT(*) FROM subtasks").fetchone()[0]
+        chat_count = conn.execute("SELECT COUNT(*) FROM chat_messages").fetchone()[0]
+        return {
+            "boards": board_count,
+            "lists": list_count,
+            "cards": card_count,
+            "subtasks": subtask_count,
+            "chat_messages": chat_count,
+        }
+    finally:
+        conn.close()
+
+
 def _fetch_board(conn: sqlite3.Connection, board_id: int) -> Board | None:
-    """Fetch a single board by id via get_boards()."""
-    row = conn.execute("SELECT * FROM boards WHERE id = ?", (board_id,)).fetchone()
-    if row is None:
-        return None
-    # Re-use get_boards but filtered — simpler: just re-query full and filter
-    boards = get_boards()
-    for b in boards:
-        if b.id == board_id:
-            return b
-    return None
+    """Fetch a single board by id. Delegates to get_board()."""
+    return get_board(board_id)
 
 
 def _fetch_card(conn: sqlite3.Connection, card_id: int) -> Card | None:

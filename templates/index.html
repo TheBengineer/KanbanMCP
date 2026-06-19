@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kanban</title>
+  <title>Kanban Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -22,7 +22,6 @@
   </script>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://unpkg.com/htmx.org@1.9.6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="/static/script.js"></script>
 </head>
 <body hx-headers='{"Accept": "text/html"}'>
@@ -31,154 +30,52 @@
       <h1 class="text-xl font-bold text-white">Kanban Board <span class="version-tag text-muted text-sm font-normal ml-2">{{ version }}</span></h1>
     </header>
 
+    {% if stats %}
+    <div class="stats-bar flex gap-6 px-6 py-4 border-b border-border text-sm">
+      <span class="text-white"><strong class="text-accent">{{ stats.boards }}</strong> boards</span>
+      <span class="text-white"><strong class="text-accent">{{ stats.lists }}</strong> lists</span>
+      <span class="text-white"><strong class="text-accent">{{ stats.cards }}</strong> cards</span>
+      <span class="text-white"><strong class="text-accent">{{ stats.subtasks }}</strong> subtasks</span>
+      <span class="text-white"><strong class="text-accent">{{ stats.chat_messages }}</strong> chat messages</span>
+    </div>
+    {% endif %}
+
     <div id="boards">
+      <div class="px-6 py-4">
+        <form class="board-form flex gap-2 max-w-sm" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
+          <input type="text" name="name" placeholder="New board name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
+          <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New Board</button>
+        </form>
+      </div>
+
       {% if boards %}
-        <div class="board-section opacity-60 mb-6">
-          <div class="board-footer mb-3">
-            <form class="board-form flex gap-2 max-w-sm" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
-              <input type="text" name="name" placeholder="New board name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
-              <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New Board</button>
-            </form>
-          </div>
-        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-6 pb-6">
         {% for board in boards %}
-        <div class="board-section mb-6" id="board-section-{{ board.id }}">
-          <div class="board-header-row flex items-center justify-between mb-3">
-            <h2 class="text-lg font-semibold text-white">{{ board.name }}</h2>
-            <button
-              hx-delete="/boards/{{ board.id }}"
-              hx-target="#board-section-{{ board.id }}"
-              hx-swap="delete"
-              class="btn-danger"
-              onclick="return confirm('Delete this board and all its lists and cards?')"
-            >Delete</button>
-          </div>
-
-          <div class="board-footer mb-3">
-            <form class="board-form flex gap-2" hx-post="/boards/{{ board.id }}/lists" hx-target="#boards" hx-swap="outerHTML">
-              <input type="text" name="name" placeholder="New list name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
-              <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New List</button>
-            </form>
-          </div>
-
-          <div class="board" data-board-id="{{ board.id }}">
-            {% if board.lists %}
-              {% for lst in board.lists %}
-              <div class="list bg-cardbg rounded-lg p-3 min-w-[260px] border border-border" id="list-{{ lst.id }}">
-                <div class="list-header flex items-center justify-between mb-2">
-                  <h2 class="font-semibold text-white text-sm">{{ lst.name }}</h2>
-                  <button
-                    hx-delete="/lists/{{ lst.id }}"
-                    hx-target="#list-{{ lst.id }}"
+        {% set list_count = board.lists | length %}
+        {% set card_count = board.lists | map(attribute='cards') | map('length') | sum %}
+        <a href="/board/{{ board.id }}"
+           class="board-card block bg-cardbg rounded-lg p-5 border border-border hover:border-accent transition-colors"
+           id="board-section-{{ board.id }}">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-lg font-semibold text-white">{{ board.name }}</h3>
+            <button hx-delete="/boards/{{ board.id }}"
+                    hx-target="#board-section-{{ board.id }}"
                     hx-swap="delete"
-                    class="btn-danger"
-                  >×</button>
-                </div>
-
-                <div class="cards" id="cards-{{ lst.id }}" data-list-id="{{ lst.id }}">
-                  {% for card in lst.cards %}
-                  <div class="card bg-[#1e2a45] rounded-md p-3 mb-2 border border-border" id="card-{{ card.id }}" data-card-id="{{ card.id }}">
-                    <div class="card-title font-medium text-white text-sm mb-1">{{ card.title }}</div>
-
-                    <div id="subtasks-{{ card.id }}">
-                      {% if card.subtasks %}
-                      {% set done = card.subtasks | selectattr('is_completed') | list | length %}
-                      {% set total = card.subtasks | length %}
-                      <div class="subtask-progress">{{ done }}/{{ total }} done</div>
-                      {% endif %}
-                      <div id="subtask-list-{{ card.id }}" class="subtask-list">
-                        {% for sub in card.subtasks %}
-                        <label class="subtask-item" id="subtask-{{ sub.id }}">
-                          <input type="checkbox" class="subtask-checkbox"
-                                 hx-patch="/subtasks/{{ sub.id }}/toggle"
-                                 hx-target="#subtask-list-{{ card.id }}"
-                                 hx-swap="innerHTML"
-                                 {{ 'checked' if sub.is_completed else '' }}>
-                          <span>{{ sub.name }}</span>
-                          <button hx-delete="/subtasks/{{ sub.id }}"
-                                  hx-target="#subtask-{{ sub.id }}"
-                                  hx-swap="delete"
-                                  class="btn-danger">×</button>
-                        </label>
-                        {% endfor %}
-                      </div>
-                      <form hx-post="/cards/{{ card.id }}/subtasks"
-                            hx-target="#subtask-list-{{ card.id }}"
-                            hx-swap="innerHTML"
-                            class="board-form" style="margin-top:4px"
-                            hx-on::after-request="this.reset()">
-                        <input type="text" name="name" placeholder="Add task..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
-                        <button type="submit" class="btn-add">+</button>
-                      </form>
-                    </div>
-                    <div id="chat-{{ card.id }}" class="mt-2">
-                      <a href="#"
-                         class="text-xs text-muted hover:text-white"
-                         hx-get="/cards/{{ card.id }}/messages"
-                         hx-target="#chat-list-{{ card.id }}"
-                         hx-swap="innerHTML">Chat (0)</a>
-                      <div id="chat-list-{{ card.id }}" class="chat-log max-h-40 overflow-y-auto mt-1"></div>
-                      <form hx-post="/cards/{{ card.id }}/messages"
-                            hx-target="#chat-list-{{ card.id }}"
-                            hx-swap="innerHTML"
-                            class="flex gap-1 mt-1"
-                            hx-on::after-request="this.reset()">
-                        <input type="text" name="author" placeholder="Name" class="w-16 px-1 py-0.5 rounded bg-[#0f0f1a] border border-border text-white text-xs">
-                        <input type="text" name="body" placeholder="Message..." class="flex-1 px-1 py-0.5 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
-                        <button type="submit" class="btn-add px-2 py-0.5 rounded bg-accent text-white text-xs">Send</button>
-                      </form>
-                    </div>
-
-                    {% if card.description %}
-                    <div class="notes-preview">
-                      {{ card.description[:80] }}{% if card.description|length > 80 %}…{% endif %}
-                    </div>
-                    {% endif %}
-
-                    <div class="flex items-center gap-2 mt-1 mb-1">
-                      <span class="inline-block w-2 h-2 rounded-full {% if card.priority == 'high' %}bg-red-500{% elif card.priority == 'medium' %}bg-yellow-500{% else %}bg-gray-400{% endif %} mr-1" title="{{ card.priority }} priority"></span>
-                      <span class="text-xs text-muted">{{ card.status.replace('_', ' ').title() }}</span>
-                    </div>
-
-                    <div class="card-actions flex gap-2 mt-2 pt-2 border-t border-border">
-                      <button hx-get="/cards/{{ card.id }}" hx-target="#modal" class="btn-add">Edit</button>
-                      <button hx-delete="/cards/{{ card.id }}"
-                              hx-target="#card-{{ card.id }}"
-                              hx-swap="delete"
-                              class="btn-danger">×</button>
-                    </div>
-                  </div>
-                  {% endfor %}
-                </div>
-
-                <div class="list-footer p-1">
-                  <form class="board-form flex gap-1" hx-post="/lists/{{ lst.id }}/cards" hx-target="#cards-{{ lst.id }}" hx-swap="beforeend" hx-on::after-request="this.reset()">
-                    <input type="text" name="title" placeholder="Card title..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
-                    <button type="submit" class="btn-add px-2 py-1 rounded bg-accent text-white text-xs">+</button>
-                  </form>
-                </div>
-              </div>
-              {% endfor %}
-            {% else %}
-              <div class="list min-w-[280px] bg-transparent shadow-none">
-                <div class="empty-state text-center py-8 text-muted">
-                  <p>No lists yet. Create one above.</p>
-                </div>
-              </div>
-            {% endif %}
+                    class="btn-danger text-xs px-2 py-1"
+                    onclick="event.preventDefault(); event.stopPropagation(); return confirm('Delete this board and all its lists and cards?')"
+            >×</button>
           </div>
-
-        </div>
+          <div class="flex gap-4 text-sm text-muted">
+            <span>{{ list_count }} list{% if list_count != 1 %}s{% endif %}</span>
+            <span>{{ card_count }} card{% if card_count != 1 %}s{% endif %}</span>
+          </div>
+        </a>
         {% endfor %}
-
+      </div>
       {% else %}
       <div class="empty-state text-center py-16">
         <h2 class="text-2xl font-bold text-white mb-2">Welcome to Kanban!</h2>
         <p class="text-muted mb-6">No boards yet. Create your first board to get started.</p>
-        <form class="board-form flex gap-2 max-w-sm mx-auto" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
-          <input type="text" name="name" placeholder="Board name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
-          <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">Create Board</button>
-        </form>
       </div>
       {% endif %}
     </div>

@@ -21,6 +21,8 @@ except Exception:
 
 from kanban.db import (
     get_boards,
+    get_board,
+    get_dashboard_stats,
     create_board,
     delete_board,
     create_list,
@@ -221,7 +223,23 @@ async def mcp_http_endpoint(request: Request):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     boards = get_boards()
-    return templates.TemplateResponse(request, "index.html", {"boards": boards, "version": GIT_HASH})
+    stats = get_dashboard_stats()
+    return templates.TemplateResponse(request, "index.html", {
+        "boards": boards,
+        "stats": stats,
+        "version": GIT_HASH,
+    })
+
+
+@app.get("/board/{board_id}", response_class=HTMLResponse)
+async def board_view(board_id: int, request: Request):
+    board = get_board(board_id)
+    if board is None:
+        raise HTTPException(status_code=404, detail="Board not found")
+    return templates.TemplateResponse(request, "board.html", {
+        "board": board,
+        "version": GIT_HASH,
+    })
 
 
 @app.post("/boards", response_class=HTMLResponse)
@@ -461,70 +479,48 @@ async def create_card_message(card_id: int, author: str = Form(""), body: str = 
 
 
 def _render_boards_html(boards) -> str:
+    """Render the dashboard board grid for HTMX swap inside #boards."""
+    new_board_form = """<div class="mb-6">
+    <form class="board-form flex gap-2 max-w-sm" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
+      <input type="text" name="name" placeholder="New board name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
+      <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New Board</button>
+    </form>
+</div>"""
+
     if not boards:
-        return """<div id="boards">
+        return f"""<div id="boards">
+  {new_board_form}
   <div class="empty-state text-center py-16">
     <h2 class="text-2xl font-bold text-white mb-2">Welcome to Kanban!</h2>
     <p class="text-muted mb-6">No boards yet. Create your first board to get started.</p>
-    <form class="board-form flex gap-2 max-w-sm mx-auto" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
-      <input type="text" name="name" placeholder="Board name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
-      <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">Create Board</button>
-    </form>
   </div>
 </div>"""
 
-    boards_html = ""
+    cards_html = ""
     for b in boards:
-        lists_html = ""
-        for lst in b.lists:
-            cards_html = "".join(_card_html(c) for c in lst.cards)
-            lists_html += f"""<div class="list bg-cardbg rounded-lg p-3 min-w-[260px] border border-border" id="list-{lst.id}">
-  <div class="list-header flex items-center justify-between mb-2">
-    <h2 class="font-semibold text-white text-sm">{lst.name}</h2>
-    <button hx-delete="/lists/{lst.id}"
-            hx-target="#list-{lst.id}"
-            hx-swap="delete"
-            class="btn-danger">×</button>
-  </div>
-  <div class="cards" id="cards-{lst.id}" data-list-id="{lst.id}">
-    {cards_html}
-  </div>
-  <div class="list-footer p-1">
-    <form class="board-form flex gap-1" hx-post="/lists/{lst.id}/cards" hx-target="#cards-{lst.id}" hx-swap="beforeend">
-      <input type="text" name="title" placeholder="Card title..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
-      <button type="submit" class="btn-add px-2 py-1 rounded bg-accent text-white text-xs">+</button>
-    </form>
-  </div>
-</div>"""
-
-        boards_html += f"""<div class="board-section mb-6" id="board-section-{b.id}">
-  <div class="board-header-row flex items-center justify-between mb-3">
-    <h2 class="text-lg font-semibold text-white">{b.name}</h2>
+        list_count = len(b.lists)
+        card_count = sum(len(lst.cards) for lst in b.lists)
+        cards_html += f"""<a href="/board/{b.id}"
+   class="board-card block bg-cardbg rounded-lg p-5 border border-border hover:border-accent transition-colors"
+   id="board-section-{b.id}">
+  <div class="flex items-center justify-between mb-2">
+    <h3 class="text-lg font-semibold text-white">{b.name}</h3>
     <button hx-delete="/boards/{b.id}"
             hx-target="#board-section-{b.id}"
             hx-swap="delete"
-            class="btn-danger"
-            onclick="return confirm('Delete this board and all its lists and cards?')">Delete</button>
+            class="btn-danger text-xs px-2 py-1"
+            onclick="event.preventDefault(); event.stopPropagation(); return confirm('Delete this board and all its lists and cards?')"
+            >×</button>
   </div>
-  <div class="board-footer mb-3">
-    <form class="board-form flex gap-2" hx-post="/boards/{b.id}/lists" hx-target="#boards" hx-swap="outerHTML">
-      <input type="text" name="name" placeholder="New list name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
-      <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New List</button>
-    </form>
+  <div class="flex gap-4 text-sm text-muted">
+    <span>{list_count} list{"s" if list_count != 1 else ""}</span>
+    <span>{card_count} card{"s" if card_count != 1 else ""}</span>
   </div>
-  <div class="board" data-board-id="{b.id}">
-    {lists_html}
-  </div>
-</div>"""
+</a>"""
 
     return f"""<div id="boards">
-  <div class="board-section opacity-60 mb-6">
-    <div class="board-footer mb-3">
-      <form class="board-form flex gap-2 max-w-sm" hx-post="/boards" hx-target="#boards" hx-swap="outerHTML">
-        <input type="text" name="name" placeholder="New board name" class="flex-1 px-3 py-1.5 rounded bg-[#0f0f1a] border border-border text-white text-sm" required>
-        <button type="submit" class="btn-add px-3 py-1.5 rounded bg-accent text-white text-sm font-medium hover:bg-red-700">+ New Board</button>
-      </form>
-    </div>
+  {new_board_form}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {cards_html}
   </div>
-  {boards_html}
 </div>"""
