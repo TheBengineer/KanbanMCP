@@ -292,3 +292,40 @@ class TestFullCrudFlow:
         assert len(boards[0].lists[0].cards) == 1
         assert len(boards[0].lists[0].cards[0].subtasks) == 1
         assert boards[0].lists[0].cards[0].subtasks[0].name == "Check"
+
+
+class TestChatMessages:
+    def test_chat_section_in_card_html(self, tclient):
+        board = db.create_board("Board")
+        lst = db.create_list(board.id, "List")
+        card = db.create_card(lst.id, "Card")
+        resp = tclient.get("/")
+        assert resp.status_code == 200
+        assert "Chat (0)" in resp.text
+
+    def test_create_chat_message_via_web(self, tclient):
+        board = db.create_board("Board")
+        lst = db.create_list(board.id, "List")
+        card = db.create_card(lst.id, "Card")
+        resp = tclient.post(f"/cards/{card.id}/messages", data={"author": "Alice", "body": "Hello"})
+        assert resp.status_code == 200
+
+    def test_get_chat_messages_html(self, tclient):
+        board = db.create_board("Board")
+        lst = db.create_list(board.id, "List")
+        card = db.create_card(lst.id, "Card")
+        tclient.post(f"/cards/{card.id}/messages", data={"author": "Alice", "body": "Hello"})
+        resp = tclient.get(f"/cards/{card.id}/messages")
+        assert resp.status_code == 200
+        assert "Hello" in resp.text
+
+    def test_chat_message_nonexistent_card(self, tclient):
+        resp = tclient.post("/cards/9999/messages", data={"author": "Alice", "body": "Hello"})
+        assert resp.status_code == 404
+
+    def test_chat_message_empty_body(self, tclient):
+        board = db.create_board("Board")
+        lst = db.create_list(board.id, "List")
+        card = db.create_card(lst.id, "Card")
+        resp = tclient.post(f"/cards/{card.id}/messages", data={"author": "Alice", "body": ""})
+        assert resp.status_code == 422
