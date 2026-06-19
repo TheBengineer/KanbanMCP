@@ -22,6 +22,7 @@ except Exception:
 from kanban.db import (
     get_boards,
     get_board,
+    get_blocked_tasks,
     get_dashboard_stats,
     create_board,
     delete_board,
@@ -230,9 +231,11 @@ async def mcp_http_endpoint(request: Request):
 async def index(request: Request):
     boards = get_boards()
     stats = get_dashboard_stats()
+    blocked_tasks = get_blocked_tasks()
     return templates.TemplateResponse(request, "index.html", {
         "boards": boards,
         "stats": stats,
+        "blocked_tasks": blocked_tasks,
         "version": GIT_HASH,
     })
 

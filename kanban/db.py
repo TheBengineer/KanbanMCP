@@ -237,6 +237,25 @@ def get_board(board_id: int) -> Board | None:
         conn.close()
 
 
+def get_blocked_tasks() -> list[dict]:
+    """Return cards in Blocked lists across all boards, with board/list context."""
+    conn = get_conn()
+    try:
+        rows = conn.execute("""
+            SELECT c.id, c.title, c.description, c.status, c.priority,
+                   b.id AS board_id, b.name AS board_name,
+                   l.id AS list_id, l.name AS list_name
+            FROM cards c
+            JOIN lists l ON c.list_id = l.id
+            JOIN boards b ON l.board_id = b.id
+            WHERE l.name = 'Blocked'
+            ORDER BY b.name, c.title
+        """).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
 def get_dashboard_stats() -> dict:
     """Return summary stats for the dashboard."""
     conn = get_conn()
