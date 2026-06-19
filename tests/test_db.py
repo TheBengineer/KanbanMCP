@@ -1,7 +1,6 @@
 import sqlite3
 
 from kanban import db
-from kanban.models import Board, Card, List, Subtask
 import pytest
 from kanban import db as kanban_db
 
