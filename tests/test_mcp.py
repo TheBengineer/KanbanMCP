@@ -59,7 +59,7 @@ class TestInitialize:
 
 
 class TestToolsList:
-    def test_tools_list_returns_13_tools(self, mcp_server):
+    def test_tools_list_returns_14_tools(self, mcp_server):
         proc, _ = mcp_server
         # handshake
         _send(proc, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
@@ -73,7 +73,7 @@ class TestToolsList:
         assert resp["jsonrpc"] == "2.0"
         assert resp["id"] == 2
         tools = resp["result"]["tools"]
-        assert len(tools) == 13
+        assert len(tools) == 14
         names = {t["name"] for t in tools}
         expected = {
             "kanban_get_boards",
@@ -89,6 +89,7 @@ class TestToolsList:
             "kanban_create_subtask",
             "kanban_toggle_subtask",
             "kanban_delete_subtask",
+            "kanban_create_chat_message",
         }
         assert names == expected
 
@@ -460,6 +461,40 @@ class TestCardTools:
         content = json.loads(resp["result"]["content"][0]["text"])
         assert content["status"] == "completed"
         assert content["priority"] == "low"
+
+    def test_create_chat_message_tool(self, mcp_server):
+        proc, _ = mcp_server
+        _send(proc, {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+        proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
+        proc.stdin.flush()
+
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": "kanban_create_board", "arguments": {"name": "B"}},
+        })
+        board = json.loads(resp["result"]["content"][0]["text"])
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+            "params": {"name": "kanban_create_list", "arguments": {"board_id": board["id"], "name": "L"}},
+        })
+        lst = json.loads(resp["result"]["content"][0]["text"])
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 4, "method": "tools/call",
+            "params": {"name": "kanban_create_card", "arguments": {"list_id": lst["id"], "title": "Card"}},
+        })
+        card = json.loads(resp["result"]["content"][0]["text"])
+
+        resp = _send(proc, {
+            "jsonrpc": "2.0", "id": 5, "method": "tools/call",
+            "params": {"name": "kanban_create_chat_message", "arguments": {
+                "card_id": card["id"], "author": "Alice", "body": "Hello"
+            }},
+        })
+        assert resp["jsonrpc"] == "2.0"
+        content = json.loads(resp["result"]["content"][0]["text"])
+        assert content["author"] == "Alice"
+        assert content["body"] == "Hello"
+        assert content["card_id"] == card["id"]
 
 
 class TestSubtaskTools:
