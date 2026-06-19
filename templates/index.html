@@ -105,7 +105,8 @@
                       <form hx-post="/cards/{{ card.id }}/subtasks"
                             hx-target="#subtask-list-{{ card.id }}"
                             hx-swap="innerHTML"
-                            class="board-form" style="margin-top:4px">
+                            class="board-form" style="margin-top:4px"
+                            hx-on::after-request="this.reset()">
                         <input type="text" name="name" placeholder="Add task..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
                         <button type="submit" class="btn-add">+</button>
                       </form>
@@ -120,7 +121,8 @@
                       <form hx-post="/cards/{{ card.id }}/messages"
                             hx-target="#chat-list-{{ card.id }}"
                             hx-swap="innerHTML"
-                            class="flex gap-1 mt-1">
+                            class="flex gap-1 mt-1"
+                            hx-on::after-request="this.reset()">
                         <input type="text" name="author" placeholder="Name" class="w-16 px-1 py-0.5 rounded bg-[#0f0f1a] border border-border text-white text-xs">
                         <input type="text" name="body" placeholder="Message..." class="flex-1 px-1 py-0.5 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
                         <button type="submit" class="btn-add px-2 py-0.5 rounded bg-accent text-white text-xs">Send</button>
@@ -150,7 +152,7 @@
                 </div>
 
                 <div class="list-footer p-1">
-                  <form class="board-form flex gap-1" hx-post="/lists/{{ lst.id }}/cards" hx-target="#cards-{{ lst.id }}" hx-swap="beforeend">
+                  <form class="board-form flex gap-1" hx-post="/lists/{{ lst.id }}/cards" hx-target="#cards-{{ lst.id }}" hx-swap="beforeend" hx-on::after-request="this.reset()">
                     <input type="text" name="title" placeholder="Card title..." class="flex-1 px-2 py-1 rounded bg-[#0f0f1a] border border-border text-white text-xs" required>
                     <button type="submit" class="btn-add px-2 py-1 rounded bg-accent text-white text-xs">+</button>
                   </form>
