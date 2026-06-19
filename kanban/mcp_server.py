@@ -168,6 +168,19 @@ class MCPServer:
                     "required": ["subtask_id"],
                 },
             },
+            {
+                "name": "kanban_create_chat_message",
+                "description": "Add a chat message to a card",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "card_id": {"type": "integer"},
+                        "author": {"type": "string", "description": "Message author"},
+                        "body": {"type": "string", "description": "Message body text"},
+                    },
+                    "required": ["card_id", "body"],
+                },
+            },
         ]
         self.initialized = False
 
@@ -278,6 +291,12 @@ class MCPServer:
         elif name == "kanban_delete_subtask":
             db.delete_subtask(args["subtask_id"])
             return {"ok": True}
+        elif name == "kanban_create_chat_message":
+            return db.create_chat_message(
+                args["card_id"],
+                args.get("author", ""),
+                args["body"],
+            ).model_dump()
         else:
             raise ValueError(f"Unknown tool: {name}")
 
