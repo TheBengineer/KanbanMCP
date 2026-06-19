@@ -71,12 +71,12 @@ def test_create_list(tmp_db_path):
     assert lst.id > 0
     assert lst.board_id == board.id
     assert lst.name == "Todo"
-    # First list gets position 1000
-    assert lst.position == 1000
+    # First custom list gets position 7000 (defaults at 1000-6000)
+    assert lst.position == 7000
 
-    # Second list gets 2000
+    # Second custom list gets 8000
     lst2 = db.create_list(board.id, "Done")
-    assert lst2.position == 2000
+    assert lst2.position == 8000
 
 
 def test_create_card(tmp_db_path):
@@ -161,8 +161,11 @@ def test_delete_list_cascade(tmp_db_path):
     db.delete_list(lst1.id)
 
     conn = _raw_conn(tmp_db_path)
-    assert conn.execute("SELECT COUNT(*) FROM lists").fetchone()[0] == 1
-    assert conn.execute("SELECT name FROM lists").fetchone()["name"] == "List2"
+    # 6 defaults + 1 remaining custom list
+    assert conn.execute("SELECT COUNT(*) FROM lists").fetchone()[0] == len(db.DEFAULT_LISTS) + 1
+    remaining_names = [r["name"] for r in conn.execute("SELECT name FROM lists ORDER BY position").fetchall()]
+    assert "List2" in remaining_names
+    assert "List1" not in remaining_names
     assert conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0] == 0
     assert conn.execute("SELECT COUNT(*) FROM subtasks").fetchone()[0] == 0
     conn.close()
@@ -200,10 +203,12 @@ def test_move_card_between_lists(tmp_db_path):
 
     boards = db.get_boards()
     board_fetched = boards[0]
+    l1 = [l for l in board_fetched.lists if l.id == lst1.id][0]
+    l2 = [l for l in board_fetched.lists if l.id == lst2.id][0]
     # card should now be in lst2
-    assert len(board_fetched.lists[0].cards) == 0  # lst1 has no cards
-    assert len(board_fetched.lists[1].cards) == 1  # lst2 has the card
-    moved = board_fetched.lists[1].cards[0]
+    assert len(l1.cards) == 0  # lst1 has no cards
+    assert len(l2.cards) == 1  # lst2 has the card
+    moved = l2.cards[0]
     assert moved.id == card.id
     assert moved.title == "Moving Card"
     assert moved.list_id == lst2.id
@@ -258,7 +263,8 @@ def test_position_rebalance_after_delete(tmp_db_path):
 
     # Rebalance should have happened: remaining cards get 1000, 2000
     boards = db.get_boards()
-    remaining = boards[0].lists[0].cards
+    lst_fetched = [l for l in boards[0].lists if l.id == lst.id][0]
+    remaining = lst_fetched.cards
     assert len(remaining) == 2
     # They should be renumbered starting at 1000
     assert remaining[0].position == 1000
@@ -317,14 +323,17 @@ def test_get_boards_nested(tmp_db_path):
     assert len(boards) == 1
     b = boards[0]
     assert b.name == "Project"
-    assert len(b.lists) == 2
+    # 6 defaults + 2 custom lists
+    assert len(b.lists) == len(db.DEFAULT_LISTS) + 2
 
-    # Lists ordered by position
-    assert b.lists[0].name == "Backlog"
-    assert b.lists[1].name == "Active"
+    # Custom lists are last (positions 7000, 8000)
+    custom_lst1 = [l for l in b.lists if l.id == lst1.id][0]
+    custom_lst2 = [l for l in b.lists if l.id == lst2.id][0]
+    assert custom_lst1.name == "Backlog"
+    assert custom_lst2.name == "Active"
 
     # Backlog has 1 card
-    backlog_cards = b.lists[0].cards
+    backlog_cards = custom_lst1.cards
     assert len(backlog_cards) == 1
     assert backlog_cards[0].title == "Idea"
     assert len(backlog_cards[0].subtasks) == 2
@@ -332,7 +341,7 @@ def test_get_boards_nested(tmp_db_path):
     assert backlog_cards[0].subtasks[1].name == "Write"
 
     # Active has 1 card with 1 subtask
-    active_cards = b.lists[1].cards
+    active_cards = custom_lst2.cards
     assert len(active_cards) == 1
     assert active_cards[0].title == "Working"
     assert active_cards[0].description == "In progress"
@@ -435,10 +444,12 @@ def test_get_boards_with_multiple_boards(tmp_db_path):
 
     boards = kanban_db.get_boards()
     assert len(boards) == 2
-    assert len(boards[0].lists) == 1
-    assert len(boards[1].lists) == 1
-    assert boards[0].lists[0].cards[0].title == "Card on Board 1"
-    assert boards[1].lists[0].cards[0].title == "Card on Board 2"
+    assert len(boards[0].lists) == len(kanban_db.DEFAULT_LISTS) + 1
+    assert len(boards[1].lists) == len(kanban_db.DEFAULT_LISTS) + 1
+    b1_list = [l for l in boards[0].lists if l.id == l1.id][0]
+    b2_list = [l for l in boards[1].lists if l.id == l2.id][0]
+    assert b1_list.cards[0].title == "Card on Board 1"
+    assert b2_list.cards[0].title == "Card on Board 2"
 
 
 def test_move_card_to_same_list(tmp_db_path):
@@ -452,9 +463,10 @@ def test_move_card_to_same_list(tmp_db_path):
     kanban_db.move_card(c1.id, lst.id, 3000)      # c1 moved past c2
 
     boards = kanban_db.get_boards()
+    target = [l for l in boards[0].lists if l.id == lst.id][0]
     # c2 (pos 2000) should come before c1 (pos 3000)
-    assert boards[0].lists[0].cards[0].id == c2.id
-    assert boards[0].lists[0].cards[1].id == c1.id
+    assert target.cards[0].id == c2.id
+    assert target.cards[1].id == c1.id
 
 
 def test_create_card_with_long_title(tmp_db_path):
@@ -491,7 +503,8 @@ def test_rebalance_after_multiple_deletes(tmp_db_path):
     kanban_db.delete_card(c2.id)
 
     boards = kanban_db.get_boards()
-    remaining = boards[0].lists[0].cards
+    target = [l for l in boards[0].lists if l.id == lst.id][0]
+    remaining = target.cards
     assert len(remaining) == 2
     assert remaining[0].position == 1000
     assert remaining[1].position == 2000
@@ -508,7 +521,10 @@ def test_delete_list_with_cards(tmp_db_path):
     kanban_db.delete_list(lst.id)
 
     boards = kanban_db.get_boards()
-    assert boards[0].lists == []  # List cascade deleted
+    # The custom list is deleted, leaving only defaults
+    remaining = [l for l in boards[0].lists if l.id != lst.id]
+    assert len(remaining) == len(kanban_db.DEFAULT_LISTS)
+    assert kanban_db.DEFAULT_LISTS == [l.name for l in remaining]
 
 
 def test_update_card_only_title(tmp_db_path):
@@ -521,7 +537,8 @@ def test_update_card_only_title(tmp_db_path):
     kanban_db.update_card(card.id, title="Updated")
 
     boards = kanban_db.get_boards()
-    updated = boards[0].lists[0].cards[0]
+    target = [l for l in boards[0].lists if l.id == lst.id][0]
+    updated = target.cards[0]
     assert updated.title == "Updated"
     assert updated.description == "Original notes"
 
@@ -601,7 +618,8 @@ class TestCardStatusPriority:
         lst = kanban_db.create_list(board.id, "List")
         card = kanban_db.create_card(lst.id, "Task", status="completed", priority="low")
         boards = kanban_db.get_boards()
-        fetched = boards[0].lists[0].cards[0]
+        target = [l for l in boards[0].lists if l.id == lst.id][0]
+        fetched = target.cards[0]
         assert fetched.status == "completed"
         assert fetched.priority == "low"
 

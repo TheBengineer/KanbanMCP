@@ -49,8 +49,8 @@ class TestListRoutes:
         resp = tclient.post(f"/boards/{board.id}/lists", data={"name": "Todo"})
         assert resp.status_code == 200
         boards = db.get_boards()
-        assert len(boards[0].lists) == 1
-        assert boards[0].lists[0].name == "Todo"
+        assert len(boards[0].lists) == len(db.DEFAULT_LISTS) + 1
+        assert boards[0].lists[-1].name == "Todo"
 
     def test_delete_list(self, tclient):
         board = db.create_board("Board")
@@ -58,7 +58,7 @@ class TestListRoutes:
         resp = tclient.delete(f"/lists/{lst.id}")
         assert resp.status_code == 200
         boards = db.get_boards()
-        assert len(boards[0].lists) == 0
+        assert len(boards[0].lists) == len(db.DEFAULT_LISTS)
 
 
 class TestCardRoutes:
@@ -68,8 +68,9 @@ class TestCardRoutes:
         resp = tclient.post(f"/lists/{lst.id}/cards", data={"title": "Task 1", "description": "Details"})
         assert resp.status_code == 200
         boards = db.get_boards()
-        assert len(boards[0].lists[0].cards) == 1
-        assert boards[0].lists[0].cards[0].title == "Task 1"
+        target = [l for l in boards[0].lists if l.id == lst.id][0]
+        assert len(target.cards) == 1
+        assert target.cards[0].title == "Task 1"
 
     def test_delete_card(self, tclient):
         board = db.create_board("B")
@@ -78,7 +79,8 @@ class TestCardRoutes:
         resp = tclient.delete(f"/cards/{card.id}")
         assert resp.status_code == 200
         boards = db.get_boards()
-        assert len(boards[0].lists[0].cards) == 0
+        target = [l for l in boards[0].lists if l.id == lst.id][0]
+        assert len(target.cards) == 0
 
     def test_move_card(self, tclient):
         board = db.create_board("Board")
@@ -91,9 +93,11 @@ class TestCardRoutes:
         )
         assert resp.status_code == 200
         boards = db.get_boards()
-        assert len(boards[0].lists[0].cards) == 0  # Todo is empty
-        assert len(boards[0].lists[1].cards) == 1  # Done has the card
-        assert boards[0].lists[1].cards[0].id == card.id
+        l1 = [l for l in boards[0].lists if l.id == lst1.id][0]
+        l2 = [l for l in boards[0].lists if l.id == lst2.id][0]
+        assert len(l1.cards) == 0  # Todo is empty
+        assert len(l2.cards) == 1  # Done has the card
+        assert l2.cards[0].id == card.id
 
     def test_get_card_modal(self, tclient):
         board = db.create_board("B")
@@ -103,6 +107,7 @@ class TestCardRoutes:
         assert resp.status_code == 200
         assert "Edit Card" in resp.text
         assert "Modal Card" in resp.text
+        assert "Some notes" in resp.text
 
     def test_update_card(self, tclient):
         board = db.create_board("B")
@@ -114,7 +119,8 @@ class TestCardRoutes:
         )
         assert resp.status_code == 200
         boards = db.get_boards()
-        updated = boards[0].lists[0].cards[0]
+        target = [l for l in boards[0].lists if l.id == lst.id][0]
+        updated = target.cards[0]
         assert updated.title == "Updated"
         assert updated.description == "Updated desc"
 
@@ -151,21 +157,28 @@ class TestCardRoutes:
         )
         assert resp.status_code == 200
         boards = db.get_boards()
-        updated = boards[0].lists[0].cards[0]
+        target = [l for l in boards[0].lists if l.id == lst.id][0]
+        updated = target.cards[0]
         assert updated.status == "pending"
         assert updated.priority == "medium"
 
 
 class TestSubtaskRoutes:
+    @staticmethod
+    def _list_by_name(name):
+        """Find list by name on the only board in the test DB."""
+        boards = db.get_boards()
+        return [l for l in boards[0].lists if l.name == name][0]
+
     def test_create_subtask(self, tclient):
         board = db.create_board("B")
         lst = db.create_list(board.id, "L")
         card = db.create_card(lst.id, "C")
         resp = tclient.post(f"/cards/{card.id}/subtasks", data={"name": "Checklist item"})
         assert resp.status_code == 200
-        boards = db.get_boards()
-        assert len(boards[0].lists[0].cards[0].subtasks) == 1
-        assert boards[0].lists[0].cards[0].subtasks[0].name == "Checklist item"
+        target = self._list_by_name("L")
+        assert len(target.cards[0].subtasks) == 1
+        assert target.cards[0].subtasks[0].name == "Checklist item"
 
     def test_toggle_subtask(self, tclient):
         board = db.create_board("B")
@@ -175,8 +188,8 @@ class TestSubtaskRoutes:
         assert sub.is_completed is False
         resp = tclient.patch(f"/subtasks/{sub.id}/toggle")
         assert resp.status_code == 200
-        boards = db.get_boards()
-        toggled = boards[0].lists[0].cards[0].subtasks[0]
+        target = self._list_by_name("L")
+        toggled = target.cards[0].subtasks[0]
         assert toggled.is_completed is True
 
     def test_delete_subtask(self, tclient):
@@ -184,11 +197,11 @@ class TestSubtaskRoutes:
         lst = db.create_list(board.id, "L")
         card = db.create_card(lst.id, "C")
         sub = db.create_subtask(card.id, "Delete me")
-        assert len(db.get_boards()[0].lists[0].cards[0].subtasks) == 1
+        assert len([c for l in db.get_boards()[0].lists for c in l.cards if c.id == card.id]) == 1
         resp = tclient.delete(f"/subtasks/{sub.id}")
         assert resp.status_code == 200
-        boards = db.get_boards()
-        assert len(boards[0].lists[0].cards[0].subtasks) == 0
+        target = self._list_by_name("L")
+        assert len(target.cards[0].subtasks) == 0
 
 
 class TestUpdateList:
@@ -199,7 +212,8 @@ class TestUpdateList:
         resp = tclient.patch(f"/lists/{lst.id}", data={"name": "New Name"})
         assert resp.status_code == 200
         boards = db.get_boards()
-        assert boards[0].lists[0].name == "New Name"
+        updated = [l for l in boards[0].lists if l.id == lst.id][0]
+        assert updated.name == "New Name"
 
     def test_update_nonexistent_list(self, tclient):
         """PATCH on non-existent list returns 404."""
@@ -275,12 +289,12 @@ class TestFullCrudFlow:
         resp = tclient.post(f"/boards/{board.id}/lists", data={"name": "Todo"})
         assert resp.status_code == 200
         boards = db.get_boards()
-        lst = boards[0].lists[0]
+        lst = [l for l in boards[0].lists if l.name == "Todo"][0]
         
         resp = tclient.post(f"/lists/{lst.id}/cards", data={"title": "Task", "description": "Notes"})
         assert resp.status_code == 200
         boards = db.get_boards()
-        card = boards[0].lists[0].cards[0]
+        card = [l for l in boards[0].lists if l.name == "Todo"][0].cards[0]
         
         resp = tclient.post(f"/cards/{card.id}/subtasks", data={"name": "Check"})
         assert resp.status_code == 200
@@ -288,10 +302,11 @@ class TestFullCrudFlow:
         # Final assertion
         boards = db.get_boards()
         assert len(boards) == 1
-        assert len(boards[0].lists) == 1
-        assert len(boards[0].lists[0].cards) == 1
-        assert len(boards[0].lists[0].cards[0].subtasks) == 1
-        assert boards[0].lists[0].cards[0].subtasks[0].name == "Check"
+        assert len(boards[0].lists) == len(db.DEFAULT_LISTS) + 1
+        todo = [l for l in boards[0].lists if l.name == "Todo"][0]
+        assert len(todo.cards) == 1
+        assert len(todo.cards[0].subtasks) == 1
+        assert todo.cards[0].subtasks[0].name == "Check"
 
 
 class TestChatMessages:

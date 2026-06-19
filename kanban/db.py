@@ -302,12 +302,20 @@ def _fetch_list(conn: sqlite3.Connection, list_id: int) -> List | None:
     return List(id=row["id"], board_id=row["board_id"], name=row["name"], position=row["position"])
 
 
+DEFAULT_LISTS = ["Backlog", "Blocked", "Todo", "In Progress", "Done", "Wontfix"]
+
+
 def create_board(name: str) -> Board:
-    """INSERT into boards, return the created Board (with id and created_at)."""
+    """INSERT into boards with default lists, return the created Board."""
     conn = get_conn()
     try:
         cur = conn.execute("INSERT INTO boards (name) VALUES (?)", (name,))
         board_id = cur.lastrowid
+        for i, list_name in enumerate(DEFAULT_LISTS):
+            conn.execute(
+                "INSERT INTO lists (board_id, name, position) VALUES (?, ?, ?)",
+                (board_id, list_name, (i + 1) * 1000),
+            )
         conn.commit()
         row = conn.execute("SELECT * FROM boards WHERE id = ?", (board_id,)).fetchone()
         return Board(id=row["id"], name=row["name"], created_at=row["created_at"])
