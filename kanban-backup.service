@@ -1,0 +1,14 @@
+[Unit]
+Description=Kanban Board — Database Backup
+Documentation=https://github.com/TheBengineer/KanbanMCP
+After=network.target
+
+[Service]
+Type=oneshot
+User=kanban
+Group=kanban
+WorkingDirectory=/opt/kanban
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kanban/venv/bin/python kanban.py backup /opt/kanban/backups 30
+StandardOutput=journal
+StandardError=journal

@@ -177,6 +177,53 @@ mkdir -p ~/.claude/skills/kanban/
 ln -s $(pwd)/kanban/SKILL.md ~/.claude/skills/kanban/SKILL.md
 ```
 
+## Backup
+
+### Native (systemd / manual)
+
+```bash
+# One-off backup to ./backups/
+python kanban.py backup
+
+# Custom directory and retention
+python kanban.py backup /mnt/backups 90
+```
+
+#### Automated with systemd timer (recommended for native)
+
+```bash
+sudo cp kanban-backup.service /etc/systemd/system/
+sudo cp kanban-backup.timer   /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now kanban-backup.timer
+```
+
+This runs a daily backup at a randomized time with 30-day retention.
+
+#### Automated with cron
+
+```bash
+# Daily at 3am
+0 3 * * * /opt/kanban/scripts/backup-kanban.sh --dir /mnt/backups --keep 90
+```
+
+### Docker
+
+```bash
+# One-off backup to ./backups/ (extracts from named volume)
+./scripts/backup-kanban.sh
+
+# Custom directory and retention
+./scripts/backup-kanban.sh --dir /mnt/backups --keep 90
+```
+
+#### Automated with cron (Docker)
+
+```bash
+# Daily at 3am — works with Docker native or compose
+0 3 * * * /home/kanban/kanban/scripts/backup-kanban.sh --dir /mnt/backups
+```
+
 ## Architecture
 
 - **Single process** — web (FastAPI + uvicorn) serves both the HTMX UI and the MCP HTTP endpoint

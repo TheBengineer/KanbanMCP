@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Kanban Database Backup
+Documentation=https://github.com/TheBengineer/KanbanMCP
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
