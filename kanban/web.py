@@ -121,6 +121,12 @@ def _card_html(card) -> str:
   </div>
   <div class="card-actions flex gap-2 mt-2 pt-2 border-t border-border">
     <button hx-get="/cards/{card.id}" hx-target="#modal" class="btn-add">Edit</button>
+    <button hx-patch="/cards/{card.id}/status"
+            hx-target="#card-{card.id}"
+            hx-swap="outerHTML"
+            hx-vals='{{"status": "in_progress"}}'
+            class="btn-add text-xs"
+            {'style="display:none"' if card.status == 'in_progress' else ''}>TODO</button>
     <button hx-delete="/cards/{card.id}"
             hx-target="#card-{card.id}"
             hx-swap="delete"
@@ -396,6 +402,14 @@ async def update_card_route(
         content=_card_html(updated),
         headers={"HX-Trigger": "closeModal"},
     )
+
+
+@app.patch("/cards/{card_id}/status", response_class=HTMLResponse)
+async def set_card_status(card_id: int, status: str = Form(...)):
+    card = update_card(card_id, status=status)
+    if card is None:
+        raise HTTPException(status_code=404, detail="Card not found")
+    return _card_html(card)
 
 
 @app.delete("/cards/{card_id}", response_class=HTMLResponse)

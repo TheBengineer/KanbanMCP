@@ -127,6 +127,12 @@
 
               <div class="card-actions flex gap-2 mt-2 pt-2 border-t border-border">
                 <button hx-get="/cards/{{ card.id }}" hx-target="#modal" class="btn-add">Edit</button>
+                <button hx-patch="/cards/{{ card.id }}/status"
+                        hx-target="#card-{{ card.id }}"
+                        hx-swap="outerHTML"
+                        hx-vals='{"status": "in_progress"}'
+                        class="btn-add text-xs"
+                        {% if card.status == 'in_progress' %}style="display:none"{% endif %}>TODO</button>
                 <button hx-delete="/cards/{{ card.id }}"
                         hx-target="#card-{{ card.id }}"
                         hx-swap="delete"
