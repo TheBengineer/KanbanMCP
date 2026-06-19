@@ -70,3 +70,11 @@ class CreateSubtask(BaseModel):
 
 class ToggleSubtask(BaseModel):
     is_completed: bool
+
+
+class ChatMessage(BaseModel):
+    id: int
+    card_id: int
+    author: str = ""
+    body: str
+    created_at: str = ""
