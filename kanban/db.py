@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-from kanban.models import Board, Card, List, Subtask
+from kanban.models import Board, Card, List, Subtask, ChatMessage
 
 DB_PATH = os.environ.get("KANBAN_DB_PATH") or os.path.join(os.path.dirname(__file__), "kanban.db")
 
@@ -49,6 +49,15 @@ def init_db() -> None:
                 is_completed INTEGER NOT NULL DEFAULT 0,
                 position INTEGER NOT NULL DEFAULT 0
             );
+
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                author TEXT NOT NULL DEFAULT '',
+                body TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_chat_messages_card ON chat_messages(card_id, created_at);
         """)
 
         # Migrate existing databases: add status and priority columns if missing
@@ -443,5 +452,56 @@ def delete_subtask(subtask_id: int) -> None:
         conn.execute("DELETE FROM subtasks WHERE id = ?", (subtask_id,))
         conn.commit()
         _rebalance("subtasks", "card_id", card_id, conn)
+    finally:
+        conn.close()
+
+
+def _fetch_chat_message(conn: sqlite3.Connection, message_id: int) -> ChatMessage | None:
+    """Fetch a single chat message by id."""
+    row = conn.execute("SELECT * FROM chat_messages WHERE id = ?", (message_id,)).fetchone()
+    if row is None:
+        return None
+    return ChatMessage(
+        id=row["id"],
+        card_id=row["card_id"],
+        author=row["author"],
+        body=row["body"],
+        created_at=row["created_at"],
+    )
+
+
+def create_chat_message(card_id: int, author: str = "", body: str = "") -> ChatMessage:
+    """INSERT a chat message."""
+    conn = get_conn()
+    try:
+        cur = conn.execute(
+            "INSERT INTO chat_messages (card_id, author, body) VALUES (?, ?, ?)",
+            (card_id, author, body),
+        )
+        message_id = cur.lastrowid
+        conn.commit()
+        return _fetch_chat_message(conn, message_id)
+    finally:
+        conn.close()
+
+
+def get_chat_messages(card_id: int) -> list[ChatMessage]:
+    """Fetch all messages for a card, ordered chronologically."""
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM chat_messages WHERE card_id = ? ORDER BY created_at, id",
+            (card_id,),
+        ).fetchall()
+        return [
+            ChatMessage(
+                id=row["id"],
+                card_id=row["card_id"],
+                author=row["author"],
+                body=row["body"],
+                created_at=row["created_at"],
+            )
+            for row in rows
+        ]
     finally:
         conn.close()
