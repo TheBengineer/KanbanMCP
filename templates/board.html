@@ -48,7 +48,7 @@
       </div>
 
       {% if board.lists %}
-      <div class="flex gap-4 overflow-x-auto" style="align-items: flex-start;">
+      <div class="board flex gap-4 overflow-x-auto" style="align-items: flex-start;" data-board-id="{{ board.id }}">
         {% for lst in board.lists %}
         <div class="list bg-cardbg rounded-lg p-3 min-w-[260px] max-w-[260px] border border-border" id="list-{{ lst.id }}">
           <div class="list-header flex items-center justify-between mb-2">
